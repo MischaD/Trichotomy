@@ -65,6 +65,7 @@ def training_loop(
     lr_kwargs           = dict(func_name='training.training_loop.learning_rate_schedule'),
     ema_kwargs          = dict(class_name='training.phema.PowerFunctionEMA'),
 
+    pretrain_path       = "",
     run_dir             = '.',      # Output directory.
     seed                = 0,        # Global random seed.
     batch_size          = 2048,     # Total batch size for one training iteration.
@@ -103,13 +104,16 @@ def training_loop(
     # Setup dataset, encoder, and network.
     dist.print0('Loading dataset...')
     dataset_obj = dnnlib.util.construct_class_by_name(**dataset_kwargs)
-    ref_image, ref_label = dataset_obj[0]
+    ref_image, ref_idx, ref_path, ref_label = dataset_obj[0]
     dist.print0('Setting up encoder...')
     encoder = dnnlib.util.construct_class_by_name(**encoder_kwargs)
-    ref_image = encoder.encode_latents(torch.as_tensor(ref_image).to(device).unsqueeze(0))
+    #ref_image = encoder.encode_latents(torch.as_tensor(ref_image).to(device).unsqueeze(0))
     dist.print0('Constructing network...')
-    interface_kwargs = dict(img_resolution=ref_image.shape[-1], img_channels=ref_image.shape[1], label_dim=ref_label.shape[-1])
+    label_dim = ref_label.shape[-1] if dataset_kwargs.cond_mode != "uncond" else 0
+    interface_kwargs = dict(img_resolution=ref_image.size()[-1], img_channels=ref_image.size()[0], label_dim=label_dim)
     net = dnnlib.util.construct_class_by_name(**network_kwargs, **interface_kwargs)
+
+
     net.train().requires_grad_(True).to(device)
 
     # Print network summary.
@@ -130,7 +134,19 @@ def training_loop(
 
     # Load previous checkpoint and decide how long to train.
     checkpoint = dist.CheckpointIO(state=state, net=net, loss_fn=loss_fn, optimizer=optimizer, ema=ema)
-    checkpoint.load_latest(run_dir)
+    ckpt_path = checkpoint.load_latest(run_dir)
+    if ckpt_path is None: 
+        if pretrain_path != "": 
+            dist.print0(f'Preloading Checkpoint: {pretrain_path}')
+            with dnnlib.util.open_url(pretrain_path, verbose=(True and dist.get_rank() == 0)) as f:
+                data = pickle.load(f)
+            net = data["ema"]
+            net.train().requires_grad_(True).to(device)
+        else: 
+            dist.print0(f'No Checkpoint found. Starting from scratch: {pretrain_path}')
+
+
+
     stop_at_nimg = total_nimg
     if slice_nimg is not None:
         granularity = checkpoint_nimg if checkpoint_nimg is not None else snapshot_nimg if snapshot_nimg is not None else batch_size
@@ -139,6 +155,7 @@ def training_loop(
     assert stop_at_nimg > state.cur_nimg
     dist.print0(f'Training from {state.cur_nimg // 1000} kimg to {stop_at_nimg // 1000} kimg:')
     dist.print0()
+
 
     # Main training loop.
     dataset_sampler = misc.InfiniteSampler(dataset=dataset_obj, rank=dist.get_rank(), num_replicas=dist.get_world_size(), seed=seed, start_idx=state.cur_nimg)
@@ -218,7 +235,7 @@ def training_loop(
         optimizer.zero_grad(set_to_none=True)
         for round_idx in range(num_accumulation_rounds):
             with misc.ddp_sync(ddp, (round_idx == num_accumulation_rounds - 1)):
-                images, labels = next(dataset_iterator)
+                images, paths, index, labels = next(dataset_iterator)
                 images = encoder.encode_latents(images.to(device))
                 loss = loss_fn(net=ddp, images=images, labels=labels.to(device))
                 training_stats.report('Loss/loss', loss)

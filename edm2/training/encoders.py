@@ -74,6 +74,17 @@ class StandardRGBEncoder(Encoder):
 
 #----------------------------------------------------------------------------
 # Pre-trained VAE encoder from Stability AI.
+STATS = {
+    "imgnet":  {'raw_means':[5.81, 3.25, 0.12, -2.14],   'raw_std': [4.17, 4.62, 3.71, 3.28]},
+    "cxr14":   {'raw_means':[6.98, 2.89, 0.94, -2.73],   'raw_std': [3.12, 4.18, 2.9, 2.61]},# same as cxr8 but all images and different split
+    "celebvqh":{'raw_means':[6.85, 0.24, 0.98, -1.02],   'raw_std': [3.36, 4.48, 3.88, 2.6]},
+    "echonet": {'raw_means':[5.77, -1.66, 2.39, -0.13],  'raw_std': [3.3, 4.26, 3.46, 2.09]},
+    "ffhq":    {'raw_means':[5.87, 3.02, -0.88, -2.45],  'raw_std': [3.61, 4.3, 3.79, 2.93]},
+    "cxr8":    {'raw_means':[ 7.00,  2.91,  0.94, -2.75],'raw_std': [3.13, 4.18, 2.89, 2.61]}, # same as cxr14 but only single disease images/different split
+    "chexpert":{'raw_mean':[ 5.58, 3.63, 0.30, -3.32],   'raw_std': [3.50, 4.76, 2.96, 3.16]},
+    "mimic":   {'raw_mean':[ 6.00,  3.30,  0.56, -3.11], 'raw_std': [3.26, 5.24, 3.06, 3.32]}
+}
+
 
 @persistence.persistent_class
 class StabilityVAEEncoder(Encoder):
@@ -84,9 +95,13 @@ class StabilityVAEEncoder(Encoder):
         final_mean  = 0,                            # Desired mean of the final latents.
         final_std   = 0.5,                          # Desired standard deviation of the final latents.
         batch_size  = 8,                            # Batch size to use when running the VAE.
+        encoder_norm_mode = None, # use-predefined rawmean and raw stds
     ):
         super().__init__()
         self.vae_name = vae_name
+        if encoder_norm_mode is not None: 
+            raw_mean = STATS[encoder_norm_mode]["raw_means"]
+            raw_std = STATS[encoder_norm_mode]["raw_std"]
         self.scale = np.float32(final_std) / np.float32(raw_std)
         self.bias = np.float32(final_mean) - np.float32(raw_mean) * self.scale
         self.batch_size = int(batch_size)
@@ -103,8 +118,8 @@ class StabilityVAEEncoder(Encoder):
         return dict(super().__getstate__(), _vae=None) # do not pickle the vae
 
     def _run_vae_encoder(self, x):
-        d = self._vae.encode(x)['latent_dist']
-        return torch.cat([d.mean, d.std], dim=1)
+        d = self._vae.encode(x).latent_dist.sample()
+        return d 
 
     def _run_vae_decoder(self, x):
         return self._vae.decode(x)['sample']
@@ -116,8 +131,6 @@ class StabilityVAEEncoder(Encoder):
         return x
 
     def encode_latents(self, x): # raw latents => final latents
-        mean, std = x.to(torch.float32).chunk(2, dim=1)
-        x = mean + torch.randn_like(mean) * std
         x = x * misc.const_like(x, self.scale).reshape(1, -1, 1, 1)
         x = x + misc.const_like(x, self.bias).reshape(1, -1, 1, 1)
         return x
@@ -134,19 +147,9 @@ class StabilityVAEEncoder(Encoder):
 #----------------------------------------------------------------------------
 
 def load_stability_vae(vae_name='stabilityai/sd-vae-ft-mse', device=torch.device('cpu')):
-    import dnnlib
-    cache_dir = dnnlib.make_cache_dir_path('diffusers')
-    os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
-    os.environ['HF_HUB_DISABLE_PROGRESS_BARS'] = '1'
-    os.environ['HF_HOME'] = cache_dir
+    from diffusers import AutoencoderKL
 
-    import diffusers # pip install diffusers # pyright: ignore [reportMissingImports]
-    try:
-        # First try with local_files_only to avoid consulting tfhub metadata if the model is already in cache.
-        vae = diffusers.models.AutoencoderKL.from_pretrained(vae_name, cache_dir=cache_dir, local_files_only=True)
-    except:
-        # Could not load the model from cache; try without local_files_only.
-        vae = diffusers.models.AutoencoderKL.from_pretrained(vae_name, cache_dir=cache_dir)
-    return vae.eval().requires_grad_(False).to(device)
+    model = AutoencoderKL.from_pretrained(vae_name, subfolder="vae")
 
+    return model.eval().requires_grad_(False).to(device)
 #----------------------------------------------------------------------------

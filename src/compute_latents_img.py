@@ -22,19 +22,9 @@ from torchvision import transforms
 from diffusers import AutoencoderKL
 
 
-def find_free_port():
-    # Create a socket, bind it to a random port, and then retrieve that port
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('', 0))
-    port = sock.getsockname()[1]
-    sock.close()
-    return port
-
-PORT = find_free_port()
-
-def setup(rank, world_size):
+def setup(rank, world_size, master_port):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = str(PORT) 
+    os.environ['MASTER_PORT'] = str(master_port) 
     torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
 
 def cleanup():
@@ -46,7 +36,6 @@ class ImageDataset(Dataset):
         self.basedir = basedir
         self.file_list = file_list
         self.imagesize = imagesize
-
 
     def __len__(self):
         return len(self.file_list)
@@ -60,7 +49,6 @@ class ImageDataset(Dataset):
         return image, idx, self.file_list[idx]
 
 
-
 def get_latent_model(path=None):
     # Load the VQ-VAE model
     if path is None: 
@@ -69,6 +57,7 @@ def get_latent_model(path=None):
     model = model.to("cuda")
     model.eval()
     return model
+
 
 def get_dataloader(file_list, rank, world_size, config):
     base_name = os.path.dirname(config.filelist) if config.filelist.endswith(".csv") else config.filelist
@@ -103,7 +92,7 @@ def get_data(config):
 
 
 def process(rank, world_size, file_list, model, config, save_path):
-    setup(rank, world_size)
+    setup(rank, world_size, config.master_port)
 
     dataloader = get_dataloader(file_list, rank, world_size, config)
     model = model.to(f"cuda:{rank}")
@@ -155,6 +144,7 @@ def get_args():
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size for DataLoader")
     parser.add_argument("--output_path", type=str, help="Output path. Default is data_dir/<model>_latents")
     parser.add_argument("--filelist", type=str, help="data dir or csv with paths to data")
+    parser.add_argument('--master_port', type=int, default=12344)
     return parser.parse_args()
 
 
@@ -166,4 +156,5 @@ if __name__ == "__main__":
     if env_local_rank != -1 and env_local_rank != config.dm_training.local_rank:
         config.dm_training.local_rank = env_local_rank
     config.debug = config.EXP_NAME.endswith("debug")
+    config.master_port = args.master_port
     main(config)

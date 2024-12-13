@@ -6,19 +6,147 @@
 # work. If not, see http://creativecommons.org/licenses/by-nc-sa/4.0/
 
 """Streaming images and labels from datasets created with dataset_tool.py."""
-
+import pandas as pd
 import os
 import numpy as np
 import zipfile
 import PIL.Image
 import json
 import torch
+import random
 import dnnlib
+import os
+import torch
+import os
+import torch
+from PIL import Image
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
+
 
 try:
     import pyspng
 except ImportError:
     pyspng = None
+
+class ImageDataset(Dataset):
+    def __init__(self, file_list, basedir, imagesize):
+        self.basedir = basedir
+        self.file_list = file_list
+        self.imagesize = imagesize
+
+    def __len__(self):
+        return len(self.file_list)
+
+    def __getitem__(self, idx):
+        img_path = os.path.join(self.basedir, self.file_list[idx])
+        image = Image.open(img_path).convert('RGB')  # Ensure 3 channels
+        image = image.resize((self.imagesize, self.imagesize))
+        image = np.array(image).transpose(2, 0, 1)  # Convert to channel-first format for PyTorch
+        image = torch.FloatTensor(image) / 255.0  # Normalize to [0,1] range
+        return image, idx, self.file_list[idx]
+
+
+
+class LatentDataset(Dataset):
+    """
+    A dataset that uses a FileList.csv to load a bunch of tensors. 
+    Does not care whether the tensors are images or videos. If they are videos, randomly returns one index.
+    """
+    def __init__(self, filelist_txt, basedir, cond_mode="cond", load_to_memory=False):
+        self.basedir = basedir
+        self.file_list = []
+        self.label_list = []
+        self.load_to_memory = load_to_memory
+        self.loaded_tensors = None
+        self.condmode = cond_mode
+        self.num_classes = -1
+
+        # Parse the file list
+        with open(filelist_txt, "r") as fp:
+            for line in fp:
+                if line.strip():  # Avoid empty lines
+
+                    parts = line.split()
+                    image_path = parts[0]
+                    label = parts[1:]
+                    if self.num_classes == -1: 
+                        self.num_classes = len(label)
+
+                    self.file_list.append(image_path + ".pt")
+                    self.label_list.append("".join(label).index("1"))
+
+        # Initialize memory storage if loading into memory
+        if self.load_to_memory:
+            self.loaded_tensors = [None] * len(self.file_list)
+
+    def __len__(self):
+        return len(self.file_list)
+
+    def __getitem__(self, idx):
+        # Check if tensors are loaded to memory
+        if self.load_to_memory:
+            # If not already loaded, load it into memory
+            if self.loaded_tensors[idx] is None:
+                self.loaded_tensors[idx] = torch.load(os.path.join(self.basedir, self.file_list[idx]))
+            tensor = self.loaded_tensors[idx]
+        else:
+            # Load tensor directly from disk
+            tensor = torch.load(os.path.join(self.basedir, self.file_list[idx]))
+
+        label = torch.zeros(self.num_classes) 
+        label[self.label_list[idx]] = 1
+
+        return tensor, idx, self.file_list[idx], label
+
+
+class FeatureDataset(torch.utils.data.Dataset): 
+    def __init__(self, path, data_base_path, pseudo_cond=False) -> None:
+        self.csv_path = path
+        self.paths = pd.read_csv(self.csv_path)["FileName"]
+        self.data_base_path = data_base_path 
+        self.pseudo_cond = pseudo_cond
+
+        if self.data_base_path[-3:] != ".pt": 
+            self.path_is_dir = True 
+        else: 
+            self.path_is_dir = False 
+            print("Preloading dataset")
+            self._preload_data = torch.load(self.data_base_path)
+            assert len(self._preload_data) == len(self.paths), "Length of .pt feature file != the length of the .pt latent file."
+
+
+        self.n_cond_features = None
+        if self.pseudo_cond: 
+            self._feature_data = torch.load(path[:-4] + ".pt")
+            self.label_dim = self._feature_data.size()[-1]
+        else: 
+            feat = torch.load(path[:-4] + ".pt")
+            self.label_dim = feat.size()[-1]
+        self.num_channels = 4 
+
+    def __getitem__(self, idx): 
+        path = self.paths[idx]
+        if self.path_is_dir: 
+            data = torch.load(os.path.join(self.data_base_path, path) + ".pt")
+        else: 
+            # precomputed in large tensor
+            data = self._preload_data[idx]
+
+        if data.ndim == 4: 
+            frame = random.randint(0, data.size()[0]-1)
+            data = data[frame] # randomly train on one frame 
+
+        if self.pseudo_cond: 
+            feature = self._feature_data[idx]# if self.pseudo_cond else None
+        else: 
+            # uncondtional 
+            feature = torch.zeros((self.label_dim,))
+
+        return data, feature # (c x h x w), (l)
+
+    def __len__(self): 
+        return len(self.paths)
 
 #----------------------------------------------------------------------------
 # Abstract base class for datasets.

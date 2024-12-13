@@ -8,6 +8,7 @@
 """Train diffusion models according to the EDM2 recipe from the paper
 "Analyzing and Improving the Training Dynamics of Diffusion Models"."""
 
+
 import os
 import json
 import warnings
@@ -52,23 +53,31 @@ def setup_training_config(preset='edm2-img512-s', **opts):
             opts[key] = value
 
     # Dataset.
-    c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=opts.data, use_labels=opts.get('cond', True))
-    try:
-        dataset_obj = dnnlib.util.construct_class_by_name(**c.dataset_kwargs)
-        dataset_channels = dataset_obj.num_channels
-        if c.dataset_kwargs.use_labels and not dataset_obj.has_labels:
-            raise click.ClickException('--cond=True, but no labels found in the dataset')
-        del dataset_obj # conserve memory
-    except IOError as err:
-        raise click.ClickException(f'--data: {err}')
+    #c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.ImageFolderDataset', path=opts.basedir, use_labels=opts.get('cond', True))
+    #try:
+    #    dataset_obj = dnnlib.util.construct_class_by_name(**c.dataset_kwargs)
+    #    dataset_channels = dataset_obj.num_channels
+    #    if c.dataset_kwargs.use_labels and not dataset_obj.has_labels:
+    #        raise click.ClickException('--cond=True, but no labels found in the dataset')
+    #    del dataset_obj # conserve memory
+    #except IOError as err:
+    #    raise click.ClickException(f'--data: {err}')
 
-    # Encoder.
-    if dataset_channels == 3:
-        c.encoder_kwargs = dnnlib.EasyDict(class_name='training.encoders.StandardRGBEncoder')
-    elif dataset_channels == 8:
-        c.encoder_kwargs = dnnlib.EasyDict(class_name='training.encoders.StabilityVAEEncoder')
-    else:
-        raise click.ClickException(f'--data: Unsupported channel count {dataset_channels}')
+    # 
+    
+    c.dataset_kwargs = dnnlib.EasyDict(class_name='training.dataset.LatentDataset', 
+                                       filelist_txt=opts.filelist,
+                                       cond_mode=opts.cond_mode,
+                                       basedir=opts.basedir, 
+                                       load_to_memory=True,
+                                       # TODO latents path
+                                       )
+
+    #dataset_obj = dnnlib.util.construct_class_by_name(**c.dataset_kwargs)
+
+    c.encoder_kwargs = dnnlib.EasyDict(class_name='training.encoders.StabilityVAEEncoder', vae_name="stabilityai/stable-diffusion-2", encoder_norm_mode=opts.encoder_norm_mode)
+    c.pretrain_path = opts.pretrain_path
+
 
     # Hyperparameters.
     c.update(total_nimg=opts.duration, batch_size=opts.batch)
@@ -98,11 +107,12 @@ def print_training_config(run_dir, c):
     dist.print0(json.dumps(c, indent=2))
     dist.print0()
     dist.print0(f'Output directory:        {run_dir}')
-    dist.print0(f'Dataset path:            {c.dataset_kwargs.path}')
-    dist.print0(f'Class-conditional:       {c.dataset_kwargs.use_labels}')
     dist.print0(f'Number of GPUs:          {dist.get_world_size()}')
+    dist.print0(f'Dataset basedir:         {c.dataset_kwargs.basedir}')
+    dist.print0(f'Cond mode:               {c.dataset_kwargs.cond_mode}')
     dist.print0(f'Batch size:              {c.batch_size}')
     dist.print0(f'Mixed-precision:         {c.network_kwargs.use_fp16}')
+    dist.print0(f'Pretrain path:           {c.pretrain_path}')
     dist.print0()
 
 #----------------------------------------------------------------------------
@@ -143,9 +153,12 @@ def parse_nimg(s):
 
 # Main options.
 @click.option('--outdir',           help='Where to save the results', metavar='DIR',            type=str, required=True)
-@click.option('--data',             help='Path to the dataset', metavar='ZIP|DIR',              type=str, required=True)
-@click.option('--cond',             help='Train class-conditional model', metavar='BOOL',       type=bool, default=True, show_default=True)
-@click.option('--preset',           help='Configuration preset', metavar='STR',                 type=str, default='edm2-img512-s', show_default=True)
+@click.option('--basedir',          help='Path to the dataset', metavar='DIR',                  type=str, required=True)
+@click.option('--filelist',         help='Path to the images', metavar='TXT',                   type=str, required=True)
+@click.option('--encoder_norm_mode',help='Which dataset stats to use', metavar='STR',           type=click.Choice(["cxr8",  "mimic", "chexpert"], case_sensitive=False))
+@click.option('--cond_mode',        help='Train class-conditional model', metavar='STR',        type=click.Choice(["uncond",  "cond", "pseudocond"]))
+@click.option('--preset',           help='Configuration preset', metavar='STR',                 type=str, default='edm2-img512-xs', show_default=True)
+@click.option('--pretrain_path',       help='Checkpoint with weights - must match preset', metavar='TXT', default='')
 
 # Hyperparameters.
 @click.option('--duration',         help='Training duration', metavar='NIMG',                   type=parse_nimg, default=None)

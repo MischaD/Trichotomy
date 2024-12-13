@@ -248,8 +248,10 @@ class UNet(torch.nn.Module):
 
     def forward(self, x, noise_labels, class_labels):
         # Embedding.
+        # TODO 
         emb = self.emb_noise(self.emb_fourier(noise_labels))
         if self.emb_label is not None:
+            # cond mode - cond --> onehot 
             emb = mp_sum(emb, self.emb_label(class_labels * np.sqrt(class_labels.shape[1])), t=self.label_balance)
         emb = mp_silu(emb)
 
@@ -296,6 +298,7 @@ class Precond(torch.nn.Module):
         x = x.to(torch.float32)
         sigma = sigma.to(torch.float32).reshape(-1, 1, 1, 1)
         class_labels = None if self.label_dim == 0 else torch.zeros([1, self.label_dim], device=x.device) if class_labels is None else class_labels.to(torch.float32).reshape(-1, self.label_dim)
+        # class_labels = torch.zeros([1, self.label_dim], device=x.device) if class_labels is None else class_labels
         dtype = torch.float16 if (self.use_fp16 and not force_fp32 and x.device.type == 'cuda') else torch.float32
 
         # Preconditioning weights.
