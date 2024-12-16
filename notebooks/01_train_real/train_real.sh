@@ -4,6 +4,7 @@
 declare -A DATASETS
 DATASETS["chexpert"]="/vol/ideadata/ed52egek/data/chexpert/chexpertchestxrays-u20210408"
 DATASETS["mimic"]="/vol/ideadata/ed52egek/data/mimic/jpg/physionet.org"
+DATASETS["cxr8"]="/vol/ideadata/ed52egek/data/chestxray14"
 
 # Define the corresponding train, val, and test files
 declare -A FILES
