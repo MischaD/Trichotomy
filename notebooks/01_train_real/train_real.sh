@@ -3,7 +3,7 @@
 # Define the datasets and their configurations
 declare -A DATASETS
 DATASETS["chexpert"]="/vol/ideadata/ed52egek/data/chexpert/chexpertchestxrays-u20210408"
-DATASETS["mimic"]="/vol/ideadata/ed52egek/data/mimic/jpg/physionet.org"
+DATASETS["mimic"]="/vol/ideadata/ed52egek/data/mimic/jpg/physionet.org/files/mimic-cxr-jpg/2.0.0/"
 DATASETS["cxr8"]="/vol/ideadata/ed52egek/data/chestxray14"
 
 # Define the corresponding train, val, and test files

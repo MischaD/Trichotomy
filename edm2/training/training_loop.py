@@ -138,9 +138,12 @@ def training_loop(
     if ckpt_path is None: 
         if pretrain_path != "": 
             dist.print0(f'Preloading Checkpoint: {pretrain_path}')
-            with dnnlib.util.open_url(pretrain_path, verbose=(True and dist.get_rank() == 0)) as f:
-                data = pickle.load(f)
-            net = data["ema"]
+            if pretrain_path.endswith(".pt"): 
+                net.load_state_dict(torch.load(pretrain_path)["net"])
+            else: 
+                with dnnlib.util.open_url(pretrain_path, verbose=(True and dist.get_rank() == 0)) as f:
+                    data = pickle.load(f)
+                net = data["ema"]
             net.train().requires_grad_(True).to(device)
         else: 
             dist.print0(f'No Checkpoint found. Starting from scratch: {pretrain_path}')

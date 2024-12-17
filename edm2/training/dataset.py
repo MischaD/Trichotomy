@@ -73,12 +73,15 @@ class LatentDataset(Dataset):
                     if self.num_classes == -1: 
                         self.num_classes = len(label)
 
-                    self.file_list.append(image_path + ".pt")
+                    self.file_list.append(image_path)
                     self.label_list.append("".join(label).index("1"))
 
         # Initialize memory storage if loading into memory
         if self.load_to_memory:
             self.loaded_tensors = [None] * len(self.file_list)
+
+        if self.condmode == "pseudocond": 
+            self.pseudo_label_list = self.load_pseudolabels(feature_extractor="swav")
 
     def __len__(self):
         return len(self.file_list)
@@ -88,17 +91,40 @@ class LatentDataset(Dataset):
         if self.load_to_memory:
             # If not already loaded, load it into memory
             if self.loaded_tensors[idx] is None:
-                self.loaded_tensors[idx] = torch.load(os.path.join(self.basedir, self.file_list[idx]))
+                self.loaded_tensors[idx] = torch.load(os.path.join(self.basedir, self.file_list[idx]  + ".pt"))
             tensor = self.loaded_tensors[idx]
         else:
             # Load tensor directly from disk
-            tensor = torch.load(os.path.join(self.basedir, self.file_list[idx]))
+            tensor = torch.load(os.path.join(self.basedir, self.file_list[idx] + ".pt"))
 
-        label = torch.zeros(self.num_classes) 
-        label[self.label_list[idx]] = 1
+        if self.condmode == "uncond": 
+            label = torch.zeros(self.num_classes) 
+        elif self.condmode == "cond": 
+            label = torch.zeros(self.num_classes) 
+            label[self.label_list[idx]] = 1
+        elif self.condmode == "pseudocond": 
+            label = self.pseudo_label_list[idx]
+        else: 
+            raise ValueError("Unknown conditioning mode")
 
         return tensor, idx, self.file_list[idx], label
 
+    def load_pseudolabels(self, feature_extractor): 
+        from beyondfid.data import hash_dataset_path
+        feature_basedir = os.path.join(self.basedir, "FEATURES", feature_extractor)
+
+        hash_filename = os.path.basename(hash_dataset_path(self.basedir, self.file_list, descriptor=feature_extractor)) + ".pt"
+        if not os.path.exists(os.path.join(feature_basedir, hash_filename)):
+            tmp_filelist = pd.DataFrame({"FileName":self.file_list, "Split":"TRAIN"})
+            tmp_filelist.to_csv(".tmp_filelist.csv")
+            print(f"hash data of feature extractor not found. Should be in: {os.path.join(feature_basedir, hash_filename)}")
+            print(f"To fix we saved a tempory filelist for you as .tmp_filelist.csv. run beyondfid with the following command (you can ignore any error messages):")
+            print(f"beyondfid .tmp_filelist.csv .tmp_filelist.csv  '' --output_path {os.path.dirname(feature_basedir)} --metrics 'fid' --feature_extractors {feature_extractor} --results_filename dummy.json --config-update=basedir=TODO/PATH/TO/BASEDIR/OF/DATASET")
+            # saves features to dirname            
+            exit(1)
+            
+        pseudo_label_list = torch.load(os.path.join(feature_basedir, hash_filename))
+        return pseudo_label_list
 
 class FeatureDataset(torch.utils.data.Dataset): 
     def __init__(self, path, data_base_path, pseudo_cond=False) -> None:
