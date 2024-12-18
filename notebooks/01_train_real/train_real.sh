@@ -1,5 +1,10 @@
 #!/bin/bash
 
+### OPTIONS: 
+# center crop only 
+CROPSTRATEGY="" #CROPSTRATEGY="" # nothing means randomresizedcrop
+#CROPSTRATEGY="--centercrop_only" #CROPSTRATEGY="" # nothing means randomresizedcrop
+
 # Define the datasets and their configurations
 declare -A DATASETS
 DATASETS["chexpert"]="/vol/ideadata/ed52egek/data/chexpert/chexpertchestxrays-u20210408"
@@ -8,13 +13,17 @@ DATASETS["cxr8"]="/vol/ideadata/ed52egek/data/chestxray14"
 
 # Define the corresponding train, val, and test files
 declare -A FILES
-FILES["chexpert_train"]="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_chexpert_train.txt"
-FILES["chexpert_val"]="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_chexpert_val.txt"
-FILES["chexpert_test"]="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_chexpert_test.txt"
+FILES["chexpert_train"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_chexpert_train.txt"
+FILES["chexpert_val"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_chexpert_val.txt"
+FILES["chexpert_test"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_chexpert_test.txt"
 
-FILES["mimic_train"]="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_mimic_train.txt"
-FILES["mimic_val"]="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_mimic_val.txt"
-FILES["mimic_test"]="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_mimic_test.txt"
+FILES["mimic_train"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_mimic_train.txt"
+FILES["mimic_val"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_mimic_val.txt"
+FILES["mimic_test"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_mimic_test.txt"
+
+FILES["cxr8_train"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt"
+FILES["cxr8_val"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_val.txt"
+FILES["cxr8_test"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_test.txt"
 
 # Define the GPUs to use
 GPUS=(1 2 3)
@@ -40,8 +49,9 @@ for DATASET_NAME in "${!DATASETS[@]}"; do
     TRAIN_FILE=${FILES["${DATASET_NAME}_train"]}
     VAL_FILE=${FILES["${DATASET_NAME}_val"]}
     TEST_FILE=${FILES["${DATASET_NAME}_test"]}
-    SAVE_PATH="./saved_models_${DATASET_NAME}"
-    LOG_FILE="$LOG_DIR/${DATASET_NAME}_training.log"
+    OUT_FILE="${DATASETS[$DATASET_NAME]}_${CROPSTRATEGY}"
+    SAVE_PATH="./saved_models_centercop_${DATASET_NAME}"
+    LOG_FILE="$LOG_DIR/${DATASET_NAME}_centercrop_training.log"
     SCREEN_NAME="${DATASET_NAME}"
 
     # Assign the GPU
@@ -54,7 +64,19 @@ for DATASET_NAME in "${!DATASETS[@]}"; do
         --train_file $TRAIN_FILE \
         --val_file $VAL_FILE \
         --test_file $TEST_FILE \
+        --outfile $OUT_FILE \
+        $CROPSTRATEGY \
         --save_path $SAVE_PATH | tee $LOG_FILE; exit"
+
+    echo "$COMMAND"
+    echo "Launching for $DATASET_NAME with parameters:"
+    echo "  Data directory: $DATA_DIR"
+    echo "  Train file: $TRAIN_FILE"
+    echo "  Val file: $VAL_FILE"
+    echo "  Test file: $TEST_FILE"
+    echo "  GPU: $GPU"
+    echo "  Save path: $SAVE_PATH"
+    echo "  Log file: $LOG_FILE"
 
     # Launch the command in a screen session
     screen -dmS "$SCREEN_NAME" bash -c "$COMMAND"

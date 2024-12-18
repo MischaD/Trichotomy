@@ -16,6 +16,7 @@ def main():
     train_parser.add_argument("--train_file", required=True, help="Path to the training set file")
     train_parser.add_argument("--val_file", required=True, help="Path to the validation set file")
     train_parser.add_argument("--test_file", required=False, help="Path to the test set file")
+    train_parser.add_argument("--centercrop_only", action="store_true", help="Use only centercropping instead of randomresizedcrop at training time")
     train_parser.add_argument("--outfile", default="auroc_results.txt", required=True, help="Name of the test.txt file")
     train_parser.add_argument("--arch", default="DENSE-NET-121", choices=["DENSE-NET-121", "DENSE-NET-169", "DENSE-NET-201"], help="Model architecture")
     train_parser.add_argument("--pretrained", action="store_true", help="Use ImageNet pre-trained weights")
@@ -73,6 +74,7 @@ def runTrain(args):
         timestampLaunch,
         None,
         model_save_path,
+        args.centercrop_only,
     )
 
     print("Training complete.")

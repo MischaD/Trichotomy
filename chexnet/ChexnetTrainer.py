@@ -45,7 +45,7 @@ class ChexnetTrainer ():
     #---- launchTimestamp - date/time, used to assign unique name for the checkpoint file
     #---- checkpoint - if not None loads the model and continues training
     
-    def train (pathDirData, pathFileTrain, pathFileVal, nnArchitecture, nnIsTrained, nnClassCount, trBatchSize, trMaxEpoch, transResize, transCrop, launchTimestamp, checkpoint, model_save_path):
+    def train (pathDirData, pathFileTrain, pathFileVal, nnArchitecture, nnIsTrained, nnClassCount, trBatchSize, trMaxEpoch, transResize, transCrop, launchTimestamp, checkpoint, model_save_path, centercrop_only):
 
         
         #-------------------- SETTINGS: NETWORK ARCHITECTURE
@@ -59,7 +59,15 @@ class ChexnetTrainer ():
         normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         
         transformList = []
-        transformList.append(transforms.RandomResizedCrop(transCrop))
+        if centercrop_only: 
+            print("Applying center croppping only ")
+            transformList.append(transforms.Resize(transCrop))
+            transformList.append(transforms.CenterCrop(transCrop))
+        else: 
+            print("Applying random cropping")
+            transformList.append(transforms.Resize(transResize))
+            transformList.append(transforms.CenterCrop(transCrop))
+
         transformList.append(transforms.RandomHorizontalFlip())
         transformList.append(transforms.ToTensor())
         transformList.append(normalize)      
