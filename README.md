@@ -16,3 +16,8 @@ Step 3: Compute Latent Normalization factor for edm2
 Step 4: Compute Features 
 
  export CUDA_VISIBLE_DEVICES=0; beyondfid /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8.csv "" "" --output_path /vol/idea_ramses/ed52egek/data/trichotomy/FEATURES --results_filename dummy.json --config-update=basedir=/vol/ideadata/ed52egek/data/chestxray14,feature_extractors.swav.batch_size=8 --feature_extractors swav  --master_port=12345
+
+
+ ## Reconstruction baseline: 
+
+ cd /vol/ideadata/ed52egek/pycharm/trichotomy; export PYTHONPATH=$PWD; conda activate edm2; export CUDA_VISIBLE_DEVICES=0; python /vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_reconstructs.py --basedir /vol/idea_ramses/ed52egek/data/trichotomy/ --batch_size 16 --output_path /vol/ideadata/ed52egek/data/reconstructed/chestxray14/ --filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt

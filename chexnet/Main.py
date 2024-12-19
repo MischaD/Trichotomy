@@ -13,6 +13,7 @@ def main():
     # Train parser
     train_parser = subparsers.add_parser("train", help="Train the model")
     train_parser.add_argument("--data_dir", required=True, help="Path to the data directory")
+    train_parser.add_argument("--data_dir_train", required=False, help="Path to the train data directory (if its different to val, test)")
     train_parser.add_argument("--train_file", required=True, help="Path to the training set file")
     train_parser.add_argument("--val_file", required=True, help="Path to the validation set file")
     train_parser.add_argument("--test_file", required=False, help="Path to the test set file")
@@ -59,9 +60,16 @@ def runTrain(args):
     model_save_path = os.path.join(args.save_path, f"m-{timestampLaunch}.pth.tar")
     os.makedirs(args.save_path, exist_ok=True)
 
+    if args.data_dir_train is not None: 
+        print(f"Using different training data basedir {args.data_dir_train}")
+    else: 
+        args.data_dir_train = args.data_dir
+
     print(f"Training NN architecture = {args.arch}")
+
     ChexnetTrainer.train(
         args.data_dir,
+        args.data_dir_train,
         args.train_file,
         args.val_file,
         args.arch,

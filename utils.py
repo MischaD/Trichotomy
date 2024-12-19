@@ -1,4 +1,4 @@
-import pytorch_lightning as pl
+
 from enum import Enum
 from einops import repeat
 import argparse
@@ -34,6 +34,7 @@ def data_loader(fn):
     :param fn: User defined data loader function
     :return: A wrapper for the data_loader function
     """
+    import pytorch_lightning as pl
 
     def func_wrapper(self):
         try: # Works for version 0.6.0

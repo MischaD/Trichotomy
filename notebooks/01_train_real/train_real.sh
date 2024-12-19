@@ -2,8 +2,7 @@
 
 ### OPTIONS: 
 # center crop only 
-CROPSTRATEGY="" #CROPSTRATEGY="" # nothing means randomresizedcrop
-#CROPSTRATEGY="--centercrop_only" #CROPSTRATEGY="" # nothing means randomresizedcrop
+DATA_DIR_TRAIN="/vol/ideadata/ed52egek/data/reconstructed"
 
 # Define the datasets and their configurations
 declare -A DATASETS
@@ -28,6 +27,8 @@ FILES["cxr8_test"]="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr
 # Define the GPUs to use
 GPUS=(1 2 3)
 
+cd /vol/ideadata/ed52egek/pycharm/trichotomy/chexnet 
+
 # Define the log file directory
 LOG_DIR="./logs"
 mkdir -p "$LOG_DIR"
@@ -49,9 +50,9 @@ for DATASET_NAME in "${!DATASETS[@]}"; do
     TRAIN_FILE=${FILES["${DATASET_NAME}_train"]}
     VAL_FILE=${FILES["${DATASET_NAME}_val"]}
     TEST_FILE=${FILES["${DATASET_NAME}_test"]}
-    OUT_FILE="${DATASETS[$DATASET_NAME]}_${CROPSTRATEGY}"
-    SAVE_PATH="./saved_models_centercop_${DATASET_NAME}"
-    LOG_FILE="$LOG_DIR/${DATASET_NAME}_centercrop_training.log"
+    OUT_FILE="${DATASETS[$DATASET_NAME]}_reconstructed"
+    SAVE_PATH="./saved_models_reconstructed_${DATASET_NAME}"
+    LOG_FILE="$LOG_DIR/${DATASET_NAME}_reconstructed_training.log"
     SCREEN_NAME="${DATASET_NAME}"
 
     # Assign the GPU
@@ -59,13 +60,13 @@ for DATASET_NAME in "${!DATASETS[@]}"; do
     ((GPU_INDEX++))
 
     # Wrap the command
-    COMMAND="CUDA_VISIBLE_DEVICES=$GPU $COMMON_COMMAND \
+    COMMAND="sleep 2; CUDA_VISIBLE_DEVICES=$GPU $COMMON_COMMAND \
         --data_dir $DATA_DIR \
+        --data_dir_train $DATA_DIR_TRAIN \
         --train_file $TRAIN_FILE \
         --val_file $VAL_FILE \
         --test_file $TEST_FILE \
         --outfile $OUT_FILE \
-        $CROPSTRATEGY \
         --save_path $SAVE_PATH | tee $LOG_FILE; exit"
 
     echo "$COMMAND"

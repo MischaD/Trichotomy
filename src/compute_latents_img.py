@@ -1,24 +1,15 @@
 import argparse
 import os
-import pandas as pd
-from torch.utils.data import DataLoader
 from beyondfid.log import logger
-from utils import main_setup, hash_dataset_path
+from utils import main_setup
 import torch.multiprocessing as mp
 import torch
-import torch.nn as nn
 import torch.distributed as dist
-from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm
-import numpy as np
-import socket
 from src.latent import compute_latent_representation, get_latent_model
+from src.data import get_distributed_image_dataloader, get_data_from_txt, get_data, get_data_from_folder
 import os
-import numpy as np
 import torch 
-from PIL import Image
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 from diffusers import AutoencoderKL
 
 
@@ -31,24 +22,6 @@ def cleanup():
     dist.destroy_process_group()
 
 
-class ImageDataset(Dataset):
-    def __init__(self, file_list, basedir, imagesize):
-        self.basedir = basedir
-        self.file_list = file_list
-        self.imagesize = imagesize
-
-    def __len__(self):
-        return len(self.file_list)
-
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.basedir, self.file_list[idx])
-        image = Image.open(img_path).convert('RGB')  # Ensure 3 channels
-        image = image.resize((self.imagesize, self.imagesize))
-        image = np.array(image).transpose(2, 0, 1)  # Convert to channel-first format for PyTorch
-        image = torch.FloatTensor(image) / 255.0  # Normalize to [0,1] range
-        return image, idx, self.file_list[idx]
-
-
 def get_latent_model(path=None):
     # Load the VQ-VAE model
     if path is None: 
@@ -59,42 +32,10 @@ def get_latent_model(path=None):
     return model
 
 
-def get_dataloader(file_list, rank, world_size, config):
-    base_name = os.path.dirname(config.filelist) if config.filelist.endswith(".csv") else config.filelist
-    dataset = ImageDataset(file_list, base_name, imagesize=config.compute_latent.input_size)  # Replaced VideoDataset with ImageDataset
-    sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank)
-    dataloader = DataLoader(dataset, batch_size=config.compute_latent.batch_size, sampler=sampler, num_workers=4, prefetch_factor=1)
-    return dataloader
-
-
-def get_data_from_folder(path):
-    ALLOWED_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.pt')  # Adjusted to image extensions only
-    # Walk through the directory
-    file_list = []
-    for root, dirs, files in os.walk(path):
-        for file in files:
-            if file.endswith(ALLOWED_EXTENSIONS):
-                # Get the relative file path
-                relative_path = os.path.relpath(os.path.join(root, file), path)
-                file_list.append(relative_path)
-    
-    output_filename = hash_dataset_path(path, img_list=file_list)
-    return file_list, os.path.basename(output_filename)
-
-
-def get_data(config):
-    data_csv = pd.read_csv(config.filelist)
-    file_list = list(data_csv["FileName"])
-    if config.debug: 
-        file_list = file_list[:1000]
-    output_filename = hash_dataset_path(os.path.dirname(config.filelist), "".join(file_list))
-    return file_list, os.path.basename(output_filename)
-
-
 def process(rank, world_size, file_list, model, config, save_path):
     setup(rank, world_size, config.master_port)
 
-    dataloader = get_dataloader(file_list, rank, world_size, config)
+    dataloader = get_distributed_image_dataloader(file_list, rank, world_size, config)
     model = model.to(f"cuda:{rank}")
     model.eval()
 
@@ -120,11 +61,12 @@ def process(rank, world_size, file_list, model, config, save_path):
 
 def main(config):
     world_size = torch.cuda.device_count()
-    
+
     if config.filelist.endswith(".csv"):
         file_list, _ =  get_data(config)
+    elif config.filelist.endswith(".txt"): 
+        file_list, _ = get_data_from_txt(config)
     else: 
-        logger.info(f"Aggregating list of images in folder: {config.filelist}")
         file_list, _ =  get_data_from_folder(config.filelist)
 
     latents_output_dir = config.get("output_path", os.path.join(os.path.dirname(config.filelist), "Latents"))

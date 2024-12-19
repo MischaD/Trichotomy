@@ -45,7 +45,7 @@ class ChexnetTrainer ():
     #---- launchTimestamp - date/time, used to assign unique name for the checkpoint file
     #---- checkpoint - if not None loads the model and continues training
     
-    def train (pathDirData, pathFileTrain, pathFileVal, nnArchitecture, nnIsTrained, nnClassCount, trBatchSize, trMaxEpoch, transResize, transCrop, launchTimestamp, checkpoint, model_save_path, centercrop_only):
+    def train (pathDirData, pathDirTrainData, pathFileTrain, pathFileVal, nnArchitecture, nnIsTrained, nnClassCount, trBatchSize, trMaxEpoch, transResize, transCrop, launchTimestamp, checkpoint, model_save_path, centercrop_only):
 
         
         #-------------------- SETTINGS: NETWORK ARCHITECTURE
@@ -59,26 +59,18 @@ class ChexnetTrainer ():
         normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         
         transformList = []
-        if centercrop_only: 
-            print("Applying center croppping only ")
-            transformList.append(transforms.Resize(transCrop))
-            transformList.append(transforms.CenterCrop(transCrop))
-        else: 
-            print("Applying random cropping")
-            transformList.append(transforms.Resize(transResize))
-            transformList.append(transforms.CenterCrop(transCrop))
-
+        transformList.append(transforms.RandomResizedCrop(transCrop))
         transformList.append(transforms.RandomHorizontalFlip())
         transformList.append(transforms.ToTensor())
         transformList.append(normalize)      
         transformSequence=transforms.Compose(transformList)
 
         #-------------------- SETTINGS: DATASET BUILDERS
-        datasetTrain = DatasetGenerator(pathImageDirectory=pathDirData, pathDatasetFile=pathFileTrain, transform=transformSequence)
+        datasetTrain = DatasetGenerator(pathImageDirectory=pathDirTrainData, pathDatasetFile=pathFileTrain, transform=transformSequence)
         datasetVal =   DatasetGenerator(pathImageDirectory=pathDirData, pathDatasetFile=pathFileVal, transform=transformSequence)
               
-        dataLoaderTrain = DataLoader(dataset=datasetTrain, batch_size=trBatchSize, shuffle=True,  num_workers=24, pin_memory=True)
-        dataLoaderVal = DataLoader(dataset=datasetVal, batch_size=trBatchSize, shuffle=False, num_workers=24, pin_memory=True)
+        dataLoaderTrain = DataLoader(dataset=datasetTrain, batch_size=trBatchSize, shuffle=True,  num_workers=8, pin_memory=True)
+        dataLoaderVal = DataLoader(dataset=datasetVal, batch_size=trBatchSize, shuffle=False, num_workers=8, pin_memory=True)
         
         #-------------------- SETTINGS: OPTIMIZER & SCHEDULER
         optimizer = optim.Adam (model.parameters(), lr=0.0001, betas=(0.9, 0.999), eps=1e-08, weight_decay=1e-5)
