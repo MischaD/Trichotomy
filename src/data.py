@@ -61,7 +61,7 @@ def get_data_from_txt(config):
 def get_data(config):
     data_csv = pd.read_csv(config.filelist)
     file_list = list(data_csv["FileName"])
-    if config.debug: 
+    if hasattr(config, "debug") and config.debug: 
         file_list = file_list[:1000]
     output_filename = hash_dataset_path(os.path.dirname(config.filelist), "".join(file_list))
     return file_list, os.path.basename(output_filename)
@@ -74,8 +74,10 @@ def get_dataloader(file_list, config):
     return dataloader
 
 
-def get_distributed_image_dataloader(file_list, rank, world_size, config):
-    base_name = os.path.dirname(config.filelist) if config.filelist.endswith(".csv") else config.filelist
+def get_distributed_image_dataloader(file_list, rank, world_size, config, base_name=None):
+    if base_name is None: 
+        base_name = os.path.dirname(config.filelist) if config.filelist.endswith(".csv") else config.filelist
+
     dataset = ImageDataset(file_list, base_name, imagesize=config.compute_latent.input_size)  # Replaced VideoDataset with ImageDataset
     sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank)
     dataloader = DataLoader(dataset, batch_size=config.compute_latent.batch_size, sampler=sampler, num_workers=4, prefetch_factor=1)

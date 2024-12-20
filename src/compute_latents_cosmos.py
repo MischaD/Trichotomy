@@ -8,6 +8,7 @@ from src.data import get_distributed_image_dataloader, get_data_from_txt, get_da
 import os
 import torch 
 from ml_collections import ConfigDict
+from concurrent.futures import ThreadPoolExecutor
 from cosmos_tokenizer.image_lib import ImageTokenizer
 from torchvision.utils import save_image
 
@@ -45,6 +46,16 @@ def compute_reconstruction(latents, decoder):
     reconstructed_tensor = decoder.decode(latents)
     return reconstructed_tensor 
 
+def save_tensor(tensor, save_path):
+    """Function to save a tensor to a file."""
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    torch.save(tensor.cpu(), save_path)
+
+def save_image_wrapper(image, save_path):
+    """Function to save an image."""
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    save_image(image.clip(0, 1).cpu(), save_path)
+
 
 def process(rank, world_size, file_list, config, save_path, skip_decoding=False, basedir=None):
     setup(rank, world_size, config.master_port)
@@ -63,24 +74,31 @@ def process(rank, world_size, file_list, config, save_path, skip_decoding=False,
     else:
         pbar = dataloader  # No progress bar for other ranks
 
+    # Thread pool for saving tasks
+    executor = ThreadPoolExecutor(max_workers=4)  # Adjust the number of workers as needed
+
     with torch.no_grad():
         for images, indices, paths in pbar:
-            # images will now be a batch of 16 images, and paths will have 16 corresponding paths
+            # Process images on the GPU
             images = images.to(f"cuda:{rank}").to(torch.bfloat16)
             image_latents = compute_latent_representation(images, encoder)
 
-            # Save each latent for every image in the batch
+            # Schedule saving of latents
             for i, path in enumerate(paths):
                 latent_save_path = os.path.join(latents_save_path, path + ".pt")
-                os.makedirs(os.path.dirname(latent_save_path), exist_ok=True)
-                torch.save(image_latents[i].cpu(), latent_save_path)
+                executor.submit(save_tensor, image_latents[i], latent_save_path)
 
-            if not skip_decoding: 
+            if not skip_decoding:
+                # Process reconstructions on the GPU
                 rec = compute_reconstruction(image_latents, decoder)
+                
+                # Schedule saving of reconstructed images
                 for i, path in enumerate(paths):
                     img_save_path = os.path.join(recon_save_path, path)
-                    os.makedirs(os.path.dirname(img_save_path), exist_ok=True)
-                    save_image(rec[i].clip(0,1).cpu(), img_save_path)
+                    executor.submit(save_image_wrapper, rec[i], img_save_path)
+
+    # Shutdown the executor to ensure all tasks complete before exiting
+    executor.shutdown(wait=True)
 
     cleanup()
 
