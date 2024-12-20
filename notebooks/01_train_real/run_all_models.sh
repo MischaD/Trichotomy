@@ -4,6 +4,8 @@
 SCRIPT_PATH="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/Main.py"
 PYTHON_EXEC="/vol/ideadata/ed52egek/conda/hugg/bin/python"
 
+cd /vol/ideadata/ed52egek/pycharm/trichotomy/chexnet
+
 # Dataset directories
 declare -A DATASETS
 DATASETS["chexpert"]="/vol/ideadata/ed52egek/data/chexpert/chexpertchestxrays-u20210408"
@@ -11,17 +13,22 @@ DATASETS["mimic"]="/vol/ideadata/ed52egek/data/mimic/jpg/physionet.org/files/mim
 DATASETS["cxr8"]="/vol/ideadata/ed52egek/data/chestxray14"
 
 # Model paths
-MODEL_MIMIC="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/saved_models_mimic/m-06122024-153204.pth.tar"
-MODEL_CXR8="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/saved_models_cxr8/m-05122024-131940.pth.tar"
-MODEL_CHEXPERT="/vol/ideadata/ed52egek/pycharm/trichotomy/saved_models_chexpert/m-06122024-153439.pth.tar"
+### Full real models: (no cropping, no reconstruction)
+#MODEL_MIMIC="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/saved_models_mimic/m-06122024-153204.pth.tar"
+#MODEL_CXR8="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/saved_models_cxr8/m-05122024-131940.pth.tar"
+#MODEL_CHEXPERT="/vol/ideadata/ed52egek/pycharm/trichotomy/saved_models_chexpert/m-06122024-153439.pth.tar"
+
+MODEL_CHEXPERT="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/saved_models_reconstructed_chexpert/m-19122024-142735.pth.tar"
+MODEL_CXR8="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/saved_models_reconstructed_cxr8/m-19122024-142735.pth.tar"
+MODEL_MIMIC="/vol/ideadata/ed52egek/pycharm/trichotomy/chexnet/saved_models_reconstructed_mimic/m-19122024-142735.pth.tar"
 
 # Test files
-TEST_CHEXPERT="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_chexpert_test.txt"
-TEST_CXR8="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_cxr8_test.txt"
-TEST_MIMIC="/vol/ideadata/ed52egek/pycharm/trichotomy/eight_mimic_test.txt"
+TEST_CHEXPERT="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_chexpert_test.txt"
+TEST_CXR8="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_test.txt"
+TEST_MIMIC="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_mimic_test.txt"
 
 # Output directory
-OUT_DIR="./results"
+OUT_DIR="./results_reconstructed"
 mkdir -p $OUT_DIR
 
 # Arrays for iteration
