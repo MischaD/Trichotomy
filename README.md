@@ -20,4 +20,18 @@ Step 4: Compute Features
 
  ## Reconstruction baseline: 
 
+# SDv2
  cd /vol/ideadata/ed52egek/pycharm/trichotomy; export PYTHONPATH=$PWD; conda activate edm2; export CUDA_VISIBLE_DEVICES=0; python /vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_reconstructs.py --basedir /vol/idea_ramses/ed52egek/data/trichotomy/ --batch_size 16 --output_path /vol/ideadata/ed52egek/data/reconstructed/chestxray14/ --filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt
+
+ # Cosmos
+
+
+CUDA_VISIBLE_DEVICES=0,1,2,3 PYTHONPATH=/vol/ideadata/ed52egek/pycharm/trichotomy \
+/vol/ideadata/ed52egek/miniconda/envs/trichotomy/bin/python \
+/vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_latents_cosmos.py \
+./src/base_experiment.py \
+cosmos \
+--batch_size 16 \
+--basedir /vol/ideadata/ed52egek/data/chestxray14 \
+--output_path /vol/ideadata/ed52egek/data/trichotomy/cosmos \
+--filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8.csv
