@@ -24,18 +24,18 @@ warnings.filterwarnings('ignore', 'You are using `torch.load` with `weights_only
 # Configuration presets.
 
 config_presets = {
-    'edm2-img512-xxs':  dnnlib.EasyDict(duration=2048<<17, batch=2048, channels=64,  lr=0.0170, decay=70000, dropout=0.00, P_mean=-0.4, P_std=1.0),
-    'edm2-img512-xs':   dnnlib.EasyDict(duration=2048<<17, batch=2048, channels=128, lr=0.0120, decay=70000, dropout=0.00, P_mean=-0.4, P_std=1.0),
-    'edm2-img512-s':    dnnlib.EasyDict(duration=2048<<17, batch=2048, channels=192, lr=0.0100, decay=70000, dropout=0.00, P_mean=-0.4, P_std=1.0),
-    'edm2-img512-m':    dnnlib.EasyDict(duration=2048<<17, batch=2048, channels=256, lr=0.0090, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
-    'edm2-img512-l':    dnnlib.EasyDict(duration=1792<<17, batch=2048, channels=320, lr=0.0080, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
-    'edm2-img512-xl':   dnnlib.EasyDict(duration=1280<<17, batch=2048, channels=384, lr=0.0070, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
-    'edm2-img512-xxl':  dnnlib.EasyDict(duration=896<<17,  batch=2048, channels=448, lr=0.0065, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
-    'edm2-img64-xs':    dnnlib.EasyDict(duration=1024<<17, batch=2048, channels=128, lr=0.0120, decay=35000, dropout=0.00, P_mean=-0.8, P_std=1.6),
-    'edm2-img64-s':     dnnlib.EasyDict(duration=1024<<17, batch=2048, channels=192, lr=0.0100, decay=35000, dropout=0.00, P_mean=-0.8, P_std=1.6),
-    'edm2-img64-m':     dnnlib.EasyDict(duration=2048<<17, batch=2048, channels=256, lr=0.0090, decay=35000, dropout=0.10, P_mean=-0.8, P_std=1.6),
-    'edm2-img64-l':     dnnlib.EasyDict(duration=1024<<17, batch=2048, channels=320, lr=0.0080, decay=35000, dropout=0.10, P_mean=-0.8, P_std=1.6),
-    'edm2-img64-xl':    dnnlib.EasyDict(duration=640<<17,  batch=2048, channels=384, lr=0.0070, decay=35000, dropout=0.10, P_mean=-0.8, P_std=1.6),
+    'edm2-img512-xxs':  dnnlib.EasyDict(duration=2048<<16, batch=2048, channels=64,  lr=0.0170, decay=70000, dropout=0.00, P_mean=-0.4, P_std=1.0),
+    'edm2-img512-xs':   dnnlib.EasyDict(duration=2048<<16, batch=2048, channels=128, lr=0.0120, decay=70000, dropout=0.00, P_mean=-0.4, P_std=1.0),
+    'edm2-img512-s':    dnnlib.EasyDict(duration=2048<<16, batch=2048, channels=192, lr=0.0100, decay=70000, dropout=0.00, P_mean=-0.4, P_std=1.0),
+    'edm2-img512-m':    dnnlib.EasyDict(duration=2048<<16, batch=2048, channels=256, lr=0.0090, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
+    'edm2-img512-l':    dnnlib.EasyDict(duration=1792<<16, batch=2048, channels=320, lr=0.0080, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
+    'edm2-img512-xl':   dnnlib.EasyDict(duration=1280<<16, batch=2048, channels=384, lr=0.0070, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
+    'edm2-img512-xxl':  dnnlib.EasyDict(duration=896<<16,  batch=2048, channels=448, lr=0.0065, decay=70000, dropout=0.10, P_mean=-0.4, P_std=1.0),
+    'edm2-img64-xs':    dnnlib.EasyDict(duration=1024<<16, batch=2048, channels=128, lr=0.0120, decay=35000, dropout=0.00, P_mean=-0.8, P_std=1.6),
+    'edm2-img64-s':     dnnlib.EasyDict(duration=1024<<16, batch=2048, channels=192, lr=0.0100, decay=35000, dropout=0.00, P_mean=-0.8, P_std=1.6),
+    'edm2-img64-m':     dnnlib.EasyDict(duration=2048<<16, batch=2048, channels=256, lr=0.0090, decay=35000, dropout=0.10, P_mean=-0.8, P_std=1.6),
+    'edm2-img64-l':     dnnlib.EasyDict(duration=1024<<16, batch=2048, channels=320, lr=0.0080, decay=35000, dropout=0.10, P_mean=-0.8, P_std=1.6),
+    'edm2-img64-xl':    dnnlib.EasyDict(duration=640<<16,  batch=2048, channels=384, lr=0.0070, decay=35000, dropout=0.10, P_mean=-0.8, P_std=1.6),
 }
 
 

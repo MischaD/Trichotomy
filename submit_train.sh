@@ -27,11 +27,12 @@ DATA_BASE_DIR="/home/atuin/b180dc/b180dc10/data/trichotomy"
 OUTDIR_PREFIX="baseline-runs"
 PRESET="edm2-img512-xs"
 BATCH_GPU="512"
-LR="0.012"
+LR="0.001"
 DECAY="0.9"
 FP16="True"
 SEED="42"
 SNAPSHOT="8Mi"
+CHECKPOINT="8Mi"
 STATUS="64Ki"
 
 
@@ -92,4 +93,5 @@ torchrun --standalone --nproc_per_node=${N_GPUS} $PROGRAM \
     --fp16 $FP16 \
     --seed $SEED \
     --snapshot $SNAPSHOT \
+    --checkpoint $CHECKPOINT \
     --status $STATUS
