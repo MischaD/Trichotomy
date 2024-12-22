@@ -85,6 +85,18 @@ class LatentDataset(Dataset):
 
     def __len__(self):
         return len(self.file_list)
+    
+    def get_label(self, idx):
+        if self.condmode == "uncond": 
+            label = torch.zeros(self.num_classes) 
+        elif self.condmode == "cond": 
+            label = torch.zeros(self.num_classes) 
+            label[self.label_list[idx]] = 1
+        elif self.condmode == "pseudocond": 
+            label = self.pseudo_label_list[idx]
+        else: 
+            raise ValueError("Unknown conditioning mode")
+        return label
 
     def __getitem__(self, idx):
         # Check if tensors are loaded to memory
@@ -97,16 +109,7 @@ class LatentDataset(Dataset):
             # Load tensor directly from disk
             tensor = torch.load(os.path.join(self.basedir, self.file_list[idx] + ".pt"))
 
-        if self.condmode == "uncond": 
-            label = torch.zeros(self.num_classes) 
-        elif self.condmode == "cond": 
-            label = torch.zeros(self.num_classes) 
-            label[self.label_list[idx]] = 1
-        elif self.condmode == "pseudocond": 
-            label = self.pseudo_label_list[idx]
-        else: 
-            raise ValueError("Unknown conditioning mode")
-
+        label = self.get_label(idx)
         return tensor, idx, self.file_list[idx], label
 
     def load_pseudolabels(self, feature_extractor): 
