@@ -181,3 +181,8 @@ sync.sh
 misc.ipynb
 quick_start_with_hugging_face.ipynb
 src/__pycache__/latent.cpython-39.pyc
+external/pretrained_ckpts/Cosmos-Tokenizer-CI16x16/autoencoder.jit
+external/pretrained_ckpts/Cosmos-Tokenizer-CI16x16/decoder.jit
+external/pretrained_ckpts/Cosmos-Tokenizer-CI16x16/README.md
+notebooks/01_train_real/train_reconstructed.ipynb
+notebooks/01_train_real/train_real_comparison.ipynb
