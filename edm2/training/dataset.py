@@ -93,7 +93,7 @@ class LatentDataset(Dataset):
             label = torch.zeros(self.num_classes) 
             label[self.label_list[idx]] = 1
         elif self.condmode == "pseudocond": 
-            label = self.pseudo_label_list[idx]
+            label = self.pseudo_label_list[idx] / torch.norm(self.pseudo_label_list[idx]) # normalize according to b.4 in edm paper
         else: 
             raise ValueError("Unknown conditioning mode")
         return label
