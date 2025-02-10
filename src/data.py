@@ -13,36 +13,119 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
 
-class LatentDataset(Dataset):
-    def __init__(self, file_list, basedir):
-        self.basedir = basedir
-        self.file_list = file_list
+class ImageDatasetReal(Dataset):
+    def __init__(self, root_dir, real_files, transform=None):
+        """
+        Args:
+            root_dir (str): Root directory containing the image folders.
+            transform (callable, optional): Transform to be applied on an image.
+        """
+        self.root_dir = root_dir
+        self.transform = transform
+        self.image_list = real_files
 
     def __len__(self):
-        return len(self.file_list)
+        return len(self.image_list)
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.basedir, self.file_list[idx]) + ".pt"
-        image = torch.load(img_path)
-        return image, idx, self.file_list[idx]
+        image_info = self.image_list[idx]
+
+        full_path = os.path.join(self.root_dir, image_info['full_path'])
+        image = Image.open(full_path).convert('RGB')
+        if self.transform:
+            image = self.transform(image)
+        return {
+            'image': image,
+            'is_real': True,
+            'model_name': image_info['model_name'],
+            'class_name': image_info['class_name'],
+            'full_path': full_path,
+            'real_image_name': image_info['full_path']
+        }
 
 
-class ImageDataset(Dataset):
-    def __init__(self, file_list, basedir, imagesize):
-        self.basedir = basedir
-        self.file_list = file_list
-        self.imagesize = imagesize
+class SnthImageDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        """
+        Args:
+            root_dir (str): Root directory containing the image folders.
+            transform (callable, optional): Transform to be applied on an image.
+        """
+        self.root_dir = root_dir
+        self.transform = transform
+        self.image_list = []
+        self._load_images()
+
+    def _load_images(self):
+        # Traverse the directory and collect image information
+        for model_name in os.listdir(self.root_dir):
+            model_path = os.path.join(self.root_dir, model_name)
+            if os.path.isdir(model_path):
+                for class_name in os.listdir(model_path):
+                    class_path = os.path.join(model_path, class_name)
+                    if os.path.isdir(class_path):
+                        images_path = os.path.join(class_path, 'images')
+                        if os.path.isdir(images_path):
+                            for image_name in os.listdir(images_path):
+                                if image_name.endswith('.png'):
+                                    # Extract real image name
+                                    real_image_name = '_'.join(image_name.split('_')[:2]) + '.png'
+                                    self.image_list.append({
+                                        'model_name': model_name,
+                                        'class_name': class_name,
+                                        'real_image_name': real_image_name,
+                                        'full_path': os.path.join(images_path, image_name)
+                                    })
 
     def __len__(self):
-        return len(self.file_list)
+        return len(self.image_list)
 
     def __getitem__(self, idx):
-        img_path = os.path.join(self.basedir, self.file_list[idx])
-        image = Image.open(img_path).convert('RGB')  # Ensure 3 channels
-        image = image.resize((self.imagesize, self.imagesize))
-        image = np.array(image).transpose(2, 0, 1)  # Convert to channel-first format for PyTorch
-        image = torch.FloatTensor(image) / 255.0  # Normalize to [0,1] range
-        return image, idx, self.file_list[idx]
+        image_info = self.image_list[idx]
+        image = Image.open(image_info['full_path']).convert('RGB')
+        if self.transform:
+            image = self.transform(image)
+        return {
+            'image': image,
+            'is_real': False,
+            'model_name': image_info['model_name'],
+            'class_name': image_info['class_name'].replace("_", " "), # No_finding --> No Finding 
+            'full_path': image_info['full_path'],
+            'real_image_name': image_info['real_image_name']
+        }
+
+
+# deprecation warning
+#class LatentDatasetDeprecated(Dataset):
+#    def __init__(self, file_list, basedir):
+#        self.basedir = basedir
+#        self.file_list = file_list
+#
+#    def __len__(self):
+#        return len(self.file_list)
+#
+#    def __getitem__(self, idx):
+#        img_path = os.path.join(self.basedir, self.file_list[idx]) + ".pt"
+#        image = torch.load(img_path)
+#        return image, idx, self.file_list[idx]
+#
+#
+#class ImageDataset(Dataset):
+#    def __init__(self, file_list, basedir, imagesize):
+#        self.basedir = basedir
+#        self.file_list = file_list
+#        self.imagesize = imagesize
+#
+#    def __len__(self):
+#        return len(self.file_list)
+#
+#    def __getitem__(self, idx):
+#        img_path = os.path.join(self.basedir, self.file_list[idx])
+#        image = Image.open(img_path).convert('RGB')  # Ensure 3 channels
+#        image = image.resize((self.imagesize, self.imagesize))
+#        image = np.array(image).transpose(2, 0, 1)  # Convert to channel-first format for PyTorch
+#        image = torch.FloatTensor(image) / 255.0  # Normalize to [0,1] range
+#        return image, idx, self.file_list[idx]
 
 
 def get_data_from_txt(config):

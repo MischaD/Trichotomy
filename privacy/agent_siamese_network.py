@@ -6,8 +6,8 @@ import tqdm
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
-from utils import Utils
-from utils.EarlyStopping import EarlyStopping
+from dataset.utils import Utils
+from dataset.utils.EarlyStopping import EarlyStopping
 
 from networks.SiameseNetwork import SiameseNetwork
 from sklearn import metrics
@@ -31,7 +31,6 @@ class AgentSiameseNetwork:
 
         # set all the important variables
         self.network = self.config['siamese_architecture']
-        self.data_handling = self.config['data_handling']
 
         self.num_workers = self.config['num_workers']
         self.pin_memory = self.config['pin_memory']
@@ -58,12 +57,8 @@ class AgentSiameseNetwork:
         self.loss_dict = {'training': [],
                           'validation': []}
 
-        if self.data_handling == 'balanced':
-            self.balanced = True
-            self.randomized = False
-        elif self.data_handling == 'randomized':
-            self.balanced = True
-            self.randomized = True
+        self.balanced = True
+        self.randomized = False
 
         # define the suffix needed for loading the checkpoint (in case you want to resume a previous experiment)
         if self.config['resumption'] is True:
@@ -147,36 +142,78 @@ class AgentSiameseNetwork:
             self.transform_val_test = lambda x: x
 
 
-        self.training_loader = Utils.get_data_loaders(phase='training', mode=self.config['mode'], data_handling=self.data_handling,
+        self.mini_epoch_size = self.config['mini_epoch_size']
+
+        if self.mini_epoch_size is None: 
+            self.training_loader = Utils.get_data_loaders(phase='training',
                                                         n_channels=self.n_channels,
-                                                        n_samples=self.n_samples_train,
-                                                        transform=self.transform_train, image_path=self.IMAGE_PATH,
+                                                        transform=self.transform_train, 
+                                                        image_path=self.IMAGE_PATH,
                                                         batch_size=self.batch_size, shuffle=True,
                                                         num_workers=self.num_workers, pin_memory=self.pin_memory,
-                                                        save_path=None, load_to_memory=self.config['load_to_memory'])
-        self.validation_loader = Utils.get_data_loaders(phase='validation', mode=self.config['mode'], data_handling=self.data_handling,
-                                                        n_channels=self.n_channels,
-                                                        n_samples=self.n_samples_val,
-                                                        transform=self.transform_val_test,
-                                                        image_path=self.IMAGE_PATH, batch_size=self.batch_size,
-                                                        shuffle=False, num_workers=self.num_workers,
-                                                        pin_memory=self.pin_memory, save_path=None, generator_seed=0, load_to_memory=self.config['load_to_memory'])
-        self.test_loader = Utils.get_data_loaders(phase='testing', data_handling='balanced', mode=self.config['mode'], 
-                                                  n_channels=self.n_channels, n_samples=self.n_samples_test,
-                                                  transform=self.transform_val_test, image_path=self.IMAGE_PATH,
-                                                  batch_size=self.batch_size, shuffle=False,
-                                                  num_workers=self.num_workers, pin_memory=self.pin_memory,
-                                                  save_path=None, generator_seed=0)
+                                                        save_path=None)
+            self.validation_loader = Utils.get_data_loaders(phase='validation', 
+                                                            n_channels=self.n_channels,
+                                                            transform=self.transform_val_test,
+                                                            image_path=self.IMAGE_PATH, batch_size=self.batch_size,
+                                                            shuffle=False, num_workers=self.num_workers,
+                                                            pin_memory=self.pin_memory, save_path=None)
+        else: 
+            self.train_ds = Utils.get_data_sets(
+                phase='training',
+                n_channels=self.n_channels,
+                transform=self.transform_train, 
+                image_path=self.IMAGE_PATH,
+            )
+
+            self.val_ds = Utils.get_data_sets(
+                phase='validation',
+                n_channels=self.n_channels,
+                transform=self.transform_train, 
+                image_path=self.IMAGE_PATH,
+            )
+
+        self.test_loader = Utils.get_data_loaders(phase='testing', 
+                                                    n_channels=self.n_channels,
+                                                    transform=self.transform_val_test, image_path=self.IMAGE_PATH,
+                                                    batch_size=self.batch_size, shuffle=False,
+                                                    num_workers=self.num_workers, pin_memory=self.pin_memory,
+                                                    save_path=None, test_file=self.config["test_file"])
+
 
     def training_validation(self):
         # Training and validation loop!
+
         for epoch in tqdm.tqdm(range(self.start_epoch, self.max_epochs), "Training"):
             start_time = time.time()
+
+            if self.mini_epoch_size: 
+
+                train_indices = torch.randperm(len(self.train_ds))[:self.mini_epoch_size]
+                val_indices = torch.randperm(len(self.val_ds))[:int(self.mini_epoch_size // 4)]
+
+                subset_train = torch.utils.data.Subset(self.train_ds, train_indices)
+                subset_val = torch.utils.data.Subset(self.val_ds, val_indices)
+
+                self.training_loader = torch.utils.data.DataLoader(
+                    subset_train, 
+                    batch_size=self.batch_size, 
+                    shuffle=False, 
+                    num_workers=self.num_workers,
+                    )
+
+                self.validation_loader = torch.utils.data.DataLoader(
+                    subset_val, 
+                    batch_size=self.batch_size, 
+                    shuffle=True,  # subset is random
+                    num_workers=self.num_workers,
+                    )
+
 
             training_loss = Utils.train(self.net, self.training_loader, self.n_samples_train, self.batch_size,
                                         self.loss, self.optimizer, epoch, self.max_epochs)
 
-            self.validation_loader.dataset.reset_generator() # make sure this is deterministic for more accurate loss
+            #self.validation_loader.dataset.reset_generator() # make sure this is deterministic for more accurate loss, useless for miniepoch
             validation_loss = Utils.validate(self.net, self.validation_loader, self.n_samples_val, self.batch_size,
                                              self.loss, epoch, self.max_epochs)
 
@@ -208,7 +245,7 @@ class AgentSiameseNetwork:
     
     def testing_evaluation(self):
         # Testing phase!
-        self.test_loader.dataset.reset_generator()
+        #self.test_loader.dataset.reset_generator()
         y_true, y_pred = Utils.test(self.best_net, self.test_loader)
         y_true, y_pred = [y_true.numpy(), y_pred.numpy()]
 

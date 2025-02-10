@@ -173,6 +173,8 @@ imaging-research/*
 *.yaml
 *.txt
 *.pdf
+*.pth
+*.jit
 EDMDiaDM
 edm2/train_edm2 copy.py
 importantmodels/*
@@ -186,3 +188,6 @@ external/pretrained_ckpts/Cosmos-Tokenizer-CI16x16/decoder.jit
 external/pretrained_ckpts/Cosmos-Tokenizer-CI16x16/README.md
 notebooks/01_train_real/train_reconstructed.ipynb
 notebooks/01_train_real/train_real_comparison.ipynb
+src/__pycache__/latent.cpython-39.pyc
+src/__pycache__/latent.cpython-39.pyc
+privacy/archive/Siamese_ResNet50_allcxr/Siamese_ResNet50_allcxr_checkpoint.pth

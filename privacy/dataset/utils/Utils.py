@@ -15,10 +15,9 @@ import pandas as pd
 import numpy as np
 import random
 from PIL import Image
+from tqdm import tqdm
 PHASE_TO_SPLIT = {"training": "TRAIN", "validation": "VAL", "testing": "TEST"}
-from dataset.SiameseUSDataset import SimaseUSDataset, SimaseImageSpaceUSDataset
-
-
+from dataset.SiameseDataset import SiameseDataset
 """
 This file provides the most important functions that are used in our experiments. These functions are called in 
 AgentSiameseNetwork.py which provides the actual training/validation loop and the code for evaluation.
@@ -26,24 +25,17 @@ AgentSiameseNetwork.py which provides the actual training/validation loop and th
 
 
 # Function to get the data loader.
-def get_data_loaders(phase='training', data_handling='balanced', n_channels=3, n_samples=100000, transform=None, mode="latent_space",
-                     image_path='./', batch_size=32, shuffle=True, num_workers=16, pin_memory=True, save_path=None, generator_seed=None, load_to_memory=False):
+def get_data_loaders(phase='training',  n_channels=3, transform=None,
+                     image_path='./', batch_size=32, shuffle=True, num_workers=16, pin_memory=True, save_path=None, test_file=""):
 
-    #dataset = SiameseDataset(phase=phase, data_handling=data_handling, n_channels=n_channels, n_samples=n_samples,
-    #                         transform=transform, image_path=image_path, save_path=save_path)
-    latents_csv = image_path
-
-    if mode == "latent_space":
-        training_latents_base_path = os.path.join(os.path.dirname(latents_csv), "Latents")
-        dataset = SimaseUSDataset(phase=phase, transform=transform, latents_csv=latents_csv, training_latents_base_path=training_latents_base_path, in_memory=load_to_memory, generator_seed=generator_seed)
-    else: 
-        training_latents_base_path = os.path.join(os.path.dirname(latents_csv), "Videos")
-        dataset = SimaseImageSpaceUSDataset(phase=phase, transform=transform, latents_csv=latents_csv, training_latents_base_path=training_latents_base_path, in_memory=load_to_memory, generator_seed=generator_seed)
-
-    dataloader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=1,
+    dataset = get_data_sets(phase=phase, n_channels=n_channels, transform=transform, image_path=image_path, save_path=save_path, test_file=test_file)
+    dataloader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers,
                                  pin_memory=pin_memory)
-
     return dataloader
+
+def get_data_sets(phase='training',  n_channels=3, transform=None, image_path='./', save_path=None, test_file=""):
+    dataset = SiameseDataset(phase=phase, n_channels=n_channels, transform=transform, image_path=image_path, save_path=save_path, test_file=test_file)
+    return dataset 
 
 
 # This function represents the training loop for the standard case where we have two input images and one output node.
@@ -115,7 +107,7 @@ def test(net, test_loader):
 
     print('Testing----->')
     with torch.no_grad():
-        for i, batch in enumerate(test_loader):
+        for i, batch in tqdm(enumerate(test_loader), total=len(test_loader)):
             inputs1, inputs2, labels = batch
 
             if y_true is None:

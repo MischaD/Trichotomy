@@ -37,8 +37,9 @@ class EDM2Loss:
         weight = (sigma ** 2 + self.sigma_data ** 2) / (sigma * self.sigma_data) ** 2
         noise = torch.randn_like(images) * sigma
         denoised, logvar = net(images + noise, sigma, labels, return_logvar=True)
-        loss = (weight / logvar.exp()) * ((denoised - images) ** 2) + logvar
-        return loss
+        rec_loss = (weight / logvar.exp()) * ((denoised - images) ** 2)
+        loss = rec_loss + logvar 
+        return loss, rec_loss, logvar
 
 #----------------------------------------------------------------------------
 # Learning rate decay schedule used in the paper "Analyzing and Improving
@@ -240,8 +241,11 @@ def training_loop(
             with misc.ddp_sync(ddp, (round_idx == num_accumulation_rounds - 1)):
                 images, paths, index, labels = next(dataset_iterator)
                 images = encoder.encode_latents(images.to(device))
-                loss = loss_fn(net=ddp, images=images, labels=labels.to(device))
+                losses = loss_fn(net=ddp, images=images, labels=labels.to(device))
+                loss, rec_loss, logvar = losses
                 training_stats.report('Loss/loss', loss)
+                training_stats.report('Loss/rec_loss', rec_loss)
+                training_stats.report('Loss/logvar_loss', logvar)
                 loss.sum().mul(loss_scaling / batch_gpu_total).backward()
 
         # Run optimizer and update weights.

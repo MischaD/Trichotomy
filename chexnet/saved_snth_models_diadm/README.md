@@ -1,0 +1,1 @@
+cxr 8, 100 epochs, but fixed number of epochs 

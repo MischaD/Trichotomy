@@ -1,8 +1,7 @@
 import argparse
 import json
 import os
-from privacy.agent_siamese_network import AgentSiameseNetwork
-
+from agent_siamese_network import AgentSiameseNetwork
 
 
 # define an argument parser

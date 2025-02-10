@@ -57,23 +57,22 @@ config_presets = {
     'edm2-img512-xxl-guid-dino': dnnlib.EasyDict(net=f'{model_root}/edm2-img512-xxl-0939524-0.015.pkl',  gnet=f'{model_root}/edm2-img512-xs-uncond-2147483-0.015.pkl', guidance=1.7), # fd_dinov2 = 33.09
 }
 
-#----------------------------------------------------------------------------
-# EDM sampler from the paper
-# "Elucidating the Design Space of Diffusion-Based Generative Models",
-# extended to support classifier-free guidance.
-
 def edm_sampler(
     net, noise, labels=None, gnet=None,
     num_steps=32, sigma_min=0.002, sigma_max=80, rho=7, guidance=1,
     S_churn=0, S_min=0, S_max=float('inf'), S_noise=1,
     dtype=torch.float32, randn_like=torch.randn_like,
+    autoguidance=False,
 ):
     # Guided denoiser.
     def denoise(x, t):
         Dx = net(x, t, labels).to(dtype)
         if guidance == 1:
             return Dx
-        ref_Dx = gnet(x, t).to(dtype)
+        if not autoguidance: 
+            ref_Dx = gnet(x, t).to(dtype)
+        else: 
+            ref_Dx = gnet(x, t, labels).to(dtype)
         return ref_Dx.lerp(Dx, guidance)
 
     # Time step discretization.
@@ -106,6 +105,7 @@ def edm_sampler(
 
     return x_next
 
+#------------------
 #----------------------------------------------------------------------------
 # Wrapper for torch.Generator that allows specifying a different random seed
 # for each sample in a minibatch.
@@ -283,28 +283,20 @@ def parse_int_list(s):
 @click.option('--S_min', 'S_min',           help='Stoch. min noise level', metavar='FLOAT',                         type=click.FloatRange(min=0), default=0, show_default=True)
 @click.option('--S_max', 'S_max',           help='Stoch. max noise level', metavar='FLOAT',                         type=click.FloatRange(min=0), default='inf', show_default=True)
 @click.option('--S_noise', 'S_noise',       help='Stoch. noise inflation', metavar='FLOAT',                         type=float, default=1, show_default=True)
-
 def cmdline(**opts):
-    """Generate random images using the given model.
-
-    Examples:
-
-    \b
-    # Generate a couple of images and save them as out/*.png
-    python generate_images.py --preset=edm2-img512-s-guid-dino --outdir=out
-
-    \b
-    # Generate 50000 images using 8 GPUs and save them as out/*/*.png
-    torchrun --standalone --nproc_per_node=8 generate_images.py \\
-        --preset=edm2-img64-s-fid --outdir=out --subdirs --seeds=0-49999
-    """
+    """Generate random images using the given model."""
     opts = dnnlib.EasyDict(opts)
+    run(opts)
 
-    # Generate.
+def run(opts, **kwargs):
+    for k, v in kwargs.items(): 
+        opts[k] = v
+    """Core logic for generating images."""
     dist.init()
     image_iter = generate_images(**opts)
     for _r in tqdm.tqdm(image_iter, unit='batch', disable=(dist.get_rank() != 0)):
         pass
+
 
 #----------------------------------------------------------------------------
 if __name__ == "__main__":
