@@ -14,7 +14,7 @@ import PIL.Image
 import json
 import torch
 import random
-import dnnlib
+import edm2.dnnlib
 import os
 import torch
 import os

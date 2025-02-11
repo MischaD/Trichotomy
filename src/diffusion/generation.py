@@ -63,8 +63,14 @@ class ImageIterableDSE:
             self.sampler_kwargs["guidance"] = self.guidance_strength
             indices = self.indices[batch_idx]
             r = dnnlib.EasyDict(images=None, labels=None, noise=None, 
-                                batch_idx=batch_idx, num_batches=len(self.rank_batches), 
-                                indices=indices, paths=None)
+                                batch_idx=batch_idx, 
+                                num_batches=len(self.rank_batches), 
+                                indices=indices, 
+                                paths=None, 
+                                memorization_prediction=[], 
+                                consistency_score=[],
+                                real_image=None,
+                                )
             r.seeds =  self.rank_batches[batch_idx] 
 
             while not image_generated: 
@@ -85,9 +91,13 @@ class ImageIterableDSE:
 
                         mixed_latents = self.encoder.decode(torch.cat([real_image_latent, latents]))
                         mixed_images = mixed_latents.float() / 255.
+                        r.real_image = mixed_images[0]
                         r.images = mixed_images[1:]
 
                         clf_pred_scores, priv_pred = self.dse.lazy_predict(mixed_images)
+                        r.memorization_prediction.extend([x.item() for x in priv_pred])
+                        r.consistency_score.extend([x.item() for x in clf_pred_scores])
+
                         print(f"Memorization Rate {r.paths[0]}: {priv_pred.float().mean()}")
                         if priv_pred.min() < 1: 
                             clf_pred_scores = clf_pred_scores + priv_pred

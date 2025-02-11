@@ -1,17 +1,7 @@
-# %% [markdown]
-# # Generate Train Dataset 
-# 
-# ## Overview 
-# 
-# Notebook that provides code to evaluate trained diffusion models. Needs image generation model, privacy model, cxr-classification model. 
 import sys
 import os
 import argparse 
 from pprint import pprint
-#current_dir = os.path.dirname(os.path.abspath("."))
-#parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
-#if parent_dir not in sys.path:
-#    sys.path.append(parent_dir)
 import torch 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,9 +13,9 @@ import pickle
 import seaborn as sns
 from PIL import Image
 from torchvision import transforms
-from training.dataset import LatentDataset
-import dnnlib
-from generate_images import StackedRandomGenerator, edm_sampler
+from edm2.training.dataset import LatentDataset
+import edm2.dnnlib as dnnlib
+from edm2.generate_images import StackedRandomGenerator, edm_sampler
 
 
 def load_latents(basepath, model_name, n_splits=1):
@@ -193,7 +183,7 @@ def get_image_generation_model(path_net, path_gnet, model_weights, gmodel_weight
         
         encoder = data.get('encoder', None)
         encoder_mode = encoder.init_kwargs.encoder_norm_mode
-        encoder = dnnlib.util.construct_class_by_name(class_name='training.encoders.StabilityVAEEncoder', vae_name=encoder.init_kwargs.vae_name, encoder_norm_mode=encoder_mode)
+        encoder = dnnlib.util.construct_class_by_name(class_name='edm2.training.encoders.StabilityVAEEncoder', vae_name=encoder.init_kwargs.vae_name, encoder_norm_mode=encoder_mode)
         print(f"Encoder was initilized with {encoder._init_kwargs}")
 
     assert net is not None
@@ -322,8 +312,6 @@ class ImageIterable:
             yield r
 
 
-
-
 def main(filelist, mode, outdir, model_weights, gmodel_weights, net, gnet, cond_mode, guidance, basedir):
     default_kwargs = {
         "EDM-2-AG":{
@@ -357,13 +345,28 @@ def main(filelist, mode, outdir, model_weights, gmodel_weights, net, gnet, cond_
             }
         },
         "DiADM":{
-            "autoguidance":True,
+            "autoguidance":False,
             "guidance":1.4,
             "model_kwargs":{
                 "model_weights":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/training-state-0050331.pt",
                 "gmodel_weights":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_uncond/training-state-0008388.pt",
                 "path_net":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/network-snapshot-0050331-0.100.pkl",
                 "path_gnet":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_uncond/network-snapshot-0008388-0.050.pkl",
+            },
+            "ds_kwargs":{
+                "cond_mode":"pseudocond", # pseudocond, cond
+                "basedir":"/vol/idea_ramses/ed52egek/data/trichotomy",
+                "basedir_images":"/vol/ideadata/ed52egek/data/chestxray14"
+            }
+        },
+        "DiADM":{
+            "autoguidance":True,
+            "guidance":1.4,
+            "model_kwargs":{
+                "model_weights":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/training-state-0050331.pt",
+                "gmodel_weights":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/training-state-0008388.pt",
+                "path_net":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/network-snapshot-0050331-0.100.pkl",
+                "path_gnet":"/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/network-snapshot-0008388-0.050.pkl",
             },
             "ds_kwargs":{
                 "cond_mode":"pseudocond", # pseudocond, cond

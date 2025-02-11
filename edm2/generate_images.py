@@ -16,8 +16,8 @@ import pickle
 import numpy as np
 import torch
 import PIL.Image
-import dnnlib
-from torch_utils import distributed as dist
+import edm2.dnnlib as dnnlib
+from edm2.torch_utils import distributed as dist
 
 warnings.filterwarnings('ignore', '`resume_download` is deprecated')
 
