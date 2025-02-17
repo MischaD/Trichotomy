@@ -43,12 +43,12 @@ case "$SLURM_ARRAY_TASK_ID" in
     0) FILELIST="$BASE_DIR/datasets/eight_cxr8_train.txt"; ENCODER_NORM_MODE="cxr8"; COND_MODE="uncond"; OUTDIR="${OUTDIR_PREFIX}/cxr8_uncond";;
     1) FILELIST="$BASE_DIR/datasets/eight_cxr8_train.txt"; ENCODER_NORM_MODE="cxr8"; COND_MODE="cond"; OUTDIR="${OUTDIR_PREFIX}/cxr8_cond";;
     2) FILELIST="$BASE_DIR/datasets/eight_cxr8_train.txt"; ENCODER_NORM_MODE="cxr8"; COND_MODE="pseudocond"; OUTDIR="${OUTDIR_PREFIX}/cxr8_pseudocond";;
-    3) FILELIST="$BASE_DIR/datasets/eight_mimic_train.txt"; ENCODER_NORM_MODE="mimic"; COND_MODE="uncond"; OUTDIR="${OUTDIR_PREFIX}/dataset1_uncond";;
-    4) FILELIST="$BASE_DIR/datasets/eight_mimic_train.txt"; ENCODER_NORM_MODE="mimic"; COND_MODE="cond"; OUTDIR="${OUTDIR_PREFIX}/dataset1_cond";;
-    5) FILELIST="$BASE_DIR/datasets/eight_mimic_train.txt"; ENCODER_NORM_MODE="mimic"; COND_MODE="pseudocond"; OUTDIR="${OUTDIR_PREFIX}/dataset1_pseudocond";;
-    6) FILELIST="$BASE_DIR/datasets/eight_chexpert_train.txt"; ENCODER_NORM_MODE="chexpert"; COND_MODE="uncond"; OUTDIR="${OUTDIR_PREFIX}/dataset2_uncond";;
-    7) FILELIST="$BASE_DIR/datasets/eight_chexpert_train.txt"; ENCODER_NORM_MODE="chexpert"; COND_MODE="cond"; OUTDIR="${OUTDIR_PREFIX}/dataset2_cond";;
-    8) FILELIST="$BASE_DIR/datasets/eight_chexpert_train.txt"; ENCODER_NORM_MODE="chexpert"; COND_MODE="pseudocond"; OUTDIR="${OUTDIR_PREFIX}/dataset2_pseudocond";;
+    3) FILELIST="$BASE_DIR/datasets/eight_mimic_train.txt"; ENCODER_NORM_MODE="mimic"; COND_MODE="uncond"; OUTDIR="${OUTDIR_PREFIX}/mimic_uncond";;
+    4) FILELIST="$BASE_DIR/datasets/eight_mimic_train.txt"; ENCODER_NORM_MODE="mimic"; COND_MODE="cond"; OUTDIR="${OUTDIR_PREFIX}/mimic_cond";;
+    5) FILELIST="$BASE_DIR/datasets/eight_mimic_train.txt"; ENCODER_NORM_MODE="mimic"; COND_MODE="pseudocond"; OUTDIR="${OUTDIR_PREFIX}/mimic_pseudocond";;
+    6) FILELIST="$BASE_DIR/datasets/eight_chexpert_train.txt"; ENCODER_NORM_MODE="chexpert"; COND_MODE="uncond"; OUTDIR="${OUTDIR_PREFIX}/chexpert_uncond";;
+    7) FILELIST="$BASE_DIR/datasets/eight_chexpert_train.txt"; ENCODER_NORM_MODE="chexpert"; COND_MODE="cond"; OUTDIR="${OUTDIR_PREFIX}/chexpert_cond";;
+    8) FILELIST="$BASE_DIR/datasets/eight_chexpert_train.txt"; ENCODER_NORM_MODE="chexpert"; COND_MODE="pseudocond"; OUTDIR="${OUTDIR_PREFIX}/chexpert_pseudocond";;
     *) echo "Invalid SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID"; exit 1;;
 esac
 

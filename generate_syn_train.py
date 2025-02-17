@@ -359,7 +359,7 @@ def main(filelist, mode, outdir, model_weights, gmodel_weights, net, gnet, cond_
                 "basedir_images":"/vol/ideadata/ed52egek/data/chestxray14"
             }
         },
-        "DiADM":{
+        "DiADM-AG":{
             "autoguidance":True,
             "guidance":1.4,
             "model_kwargs":{
@@ -424,7 +424,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate images from a latent dataset.")
     
     parser.add_argument("--filelist", type=str, required=True, help="Path to the filelist.")
-    parser.add_argument("--mode", type=str, default="EDM-2", choices=["EDM-2", "EDM-2-AG", "DiADM"], help="Mode for image generation.")
+    parser.add_argument("--mode", type=str, required=True, choices=["EDM-2", "EDM-2-AG", "DiADM", "DiADM-AG"], help="Mode for image generation.")
     parser.add_argument("--outdir", type=str, default="./snth_train_images/", help="Output directory for generated images.")
     parser.add_argument("--model_weights", type=str, required=True, help="Path to model weights.")
     parser.add_argument("--gmodel_weights", type=str, required=True, help="Path to generative model weights.")

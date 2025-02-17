@@ -76,8 +76,9 @@ def parse_args():
     parser.add_argument("--n_per_index", type=int, default=4, help="Batch size and sampling factor.")
     parser.add_argument("--filelist", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt", help="Path to the filelist.")
     parser.add_argument("--target_dir", type=str, default="diadm_train_with_dse", help="Target directory for generated images.")
-    parser.add_argument("--mode", type=str, default="DiADM", help="Mode for the model configuration.")
+    parser.add_argument("--mode", type=str, required=True, help="Mode for the model configuration.")
     parser.add_argument("--guidance", type=float, default=1.4, help="Guidance parameter.")
+    parser.add_argument("--pseudo_cond_feature_extractor", help='Feature extractor for the pseudocon model. Precompute using beyondfid.', default="inception")
     parser.add_argument("--model_weights", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/training-state-0050331.pt", help="Path to model weights.")
     parser.add_argument("--gmodel_weights", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_uncond/training-state-0008388.pt", help="Path to guidance model weights.")
     parser.add_argument("--path_net", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/network-snapshot-0050331-0.100.pkl", help="Path to network snapshot.")
@@ -103,7 +104,8 @@ if __name__ == "__main__":
             "ds_kwargs": {
                 "cond_mode": "pseudocond",
                 "basedir": "/vol/idea_ramses/ed52egek/data/trichotomy",
-                "basedir_images": "/vol/ideadata/ed52egek/data/chestxray14"
+                "basedir_images": "/vol/ideadata/ed52egek/data/chestxray14",
+                "pseudo_cond_feature_extractor": args.pseudo_cond_feature_extractor,
             }
         }
     }

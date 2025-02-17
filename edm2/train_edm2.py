@@ -71,6 +71,7 @@ def setup_training_config(preset='edm2-img512-s', **opts):
                                        cond_mode=opts.cond_mode,
                                        basedir=opts.basedir, 
                                        load_to_memory=True,
+                                       pseudo_cond_feature_extractor=opts.pseudo_cond_feature_extractor, 
                                        # TODO latents path
                                        )
 
@@ -158,6 +159,7 @@ def parse_nimg(s):
 @click.option('--filelist',         help='Path to the images', metavar='TXT',                   type=str, required=True)
 @click.option('--encoder_norm_mode',help='Which dataset stats to use', metavar='STR',           type=click.Choice(["cxr8",  "mimic", "chexpert"], case_sensitive=False))
 @click.option('--cond_mode',        help='Train class-conditional model', metavar='STR',        type=click.Choice(["uncond",  "cond", "pseudocond"]))
+@click.option('--pseudo_cond_feature_extractor', help='Feature extractor for the pseudocon model. Precompute using beyondfid.', metavar='STR', default="inception")
 @click.option('--preset',           help='Configuration preset', metavar='STR',                 type=str, default='edm2-img512-xs', show_default=True)
 @click.option('--pretrain_path',       help='Checkpoint with weights - must match preset', metavar='TXT', default='')
 

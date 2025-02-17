@@ -29,6 +29,7 @@ try:
 except ImportError:
     pyspng = None
 
+
 class ImageDataset(Dataset):
     def __init__(self, file_list, basedir, imagesize):
         self.basedir = basedir
@@ -47,19 +48,19 @@ class ImageDataset(Dataset):
         return image, idx, self.file_list[idx]
 
 
-
 class LatentDataset(Dataset):
     """
     A dataset that uses a FileList.csv to load a bunch of tensors. 
     Does not care whether the tensors are images or videos. If they are videos, randomly returns one index.
     """
-    def __init__(self, filelist_txt, basedir, cond_mode="cond", load_to_memory=False):
+    def __init__(self, filelist_txt, basedir, cond_mode="cond", pseudo_cond_feature_extractor="swav", load_to_memory=False):
         self.basedir = basedir
         self.file_list = []
         self.label_list = []
         self.load_to_memory = load_to_memory
         self.loaded_tensors = None
         self.condmode = cond_mode
+        self.pseudo_cond_feature_extractor = pseudo_cond_feature_extractor
         self.num_classes = -1
 
         # Parse the file list
@@ -81,7 +82,7 @@ class LatentDataset(Dataset):
             self.loaded_tensors = [None] * len(self.file_list)
 
         if self.condmode == "pseudocond": 
-            self.pseudo_label_list = self.load_pseudolabels(feature_extractor="swav")
+            self.pseudo_label_list = self.load_pseudolabels(feature_extractor=self.pseudo_cond_feature_extractor )
 
     def __len__(self):
         return len(self.file_list)
@@ -126,7 +127,9 @@ class LatentDataset(Dataset):
             # saves features to dirname            
             exit(1)
             
-        pseudo_label_list = torch.load(os.path.join(feature_basedir, hash_filename))
+        path = os.path.join(feature_basedir, hash_filename)
+        print(f"Loading pseudocond features: {path}")
+        pseudo_label_list = torch.load(path)
         return pseudo_label_list
 
 class FeatureDataset(torch.utils.data.Dataset): 

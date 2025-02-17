@@ -147,6 +147,7 @@ def generate_images(
     verbose             = True,                 # Enable status prints?
     device              = torch.device('cuda'), # Which compute device to use.
     sampler_fn          = edm_sampler,          # Which sampler function to use.
+    pseudo_cond_feature_extractor = "inception",
     **sampler_kwargs,                           # Additional arguments for the sampler function.
 ):
     # Rank 0 goes first.
@@ -198,7 +199,7 @@ def generate_images(
         torch.distributed.barrier()
 
     from training.dataset import LatentDataset
-    train_ds = LatentDataset(filelist_txt=filelist, basedir=basedir, cond_mode=cond_mode, load_to_memory=False)
+    train_ds = LatentDataset(filelist_txt=filelist, basedir=basedir, cond_mode=cond_mode, load_to_memory=False, pseudo_cond_feature_extractor=pseudo_cond_feature_extractor)
     seeds = np.arange(len(train_ds))
 
     # Divide seeds into batches.
@@ -270,6 +271,7 @@ def parse_int_list(s):
 @click.option('--gmodel_weights',           help='Guidance weigth tensor filename', metavar='PATH|URL',             type=str, default=None, required=True)
 @click.option('--filelist',                 help='Path to the images', metavar='TXT',                               type=str, required=True)
 @click.option('--cond_mode',                help='Train class-conditional model', metavar='STR',                    type=click.Choice(["uncond",  "cond", "pseudocond"]))
+@click.option('--pseudo_cond_feature_extractor', help='Feature extractor for the pseudocon model. Precompute using beyondfid.', metavar='STR', default="inception")
 @click.option('--outdir',                   help='Where to save the output images', metavar='DIR',                  type=str, required=True)
 @click.option('--basedir',                  help='Where the images are saved', metavar='DIR',                       type=str, required=True)
 @click.option('--batch', 'max_batch_size',  help='Maximum batch size', metavar='INT',                               type=click.IntRange(min=1), default=32, show_default=True)

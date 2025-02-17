@@ -81,8 +81,8 @@ STATS = {
     "echonet": {'raw_means':[5.77, -1.66, 2.39, -0.13],  'raw_std': [3.3, 4.26, 3.46, 2.09]},
     "ffhq":    {'raw_means':[5.87, 3.02, -0.88, -2.45],  'raw_std': [3.61, 4.3, 3.79, 2.93]},
     "cxr8":    {'raw_means':[ 7.00,  2.91,  0.94, -2.75],'raw_std': [3.13, 4.18, 2.89, 2.61]}, # same as cxr14 but only single disease images/different split
-    "chexpert":{'raw_mean':[ 5.58, 3.63, 0.30, -3.32],   'raw_std': [3.50, 4.76, 2.96, 3.16]},
-    "mimic":   {'raw_mean':[ 6.00,  3.30,  0.56, -3.11], 'raw_std': [3.26, 5.24, 3.06, 3.32]}
+    "chexpert":{'raw_means':[ 5.58, 3.63, 0.30, -3.32],   'raw_std': [3.50, 4.76, 2.96, 3.16]},
+    "mimic":   {'raw_means':[ 6.00,  3.30,  0.56, -3.11], 'raw_std': [3.26, 5.24, 3.06, 3.32]}
 }
 
 
