@@ -53,6 +53,8 @@ class DatasetGenerator (Dataset):
         fileDescriptor = open(pathDatasetFile, "r")
         
         line = True
+        self.first_file = True
+        self.replace_with_png = False
         
         while line:
                 
@@ -71,9 +73,23 @@ class DatasetGenerator (Dataset):
             
         fileDescriptor.close()
     
+    def check_jpg_vs_png(self, image_path): 
+        if os.path.exists(image_path): 
+            return False
+        if os.path.exists(image_path[:-4] + ".png"): 
+            return True
+        raise FileNotFoundError(f"File not found (also not the png version:) {image_path}\n{image_path[:-4] + '.png'}")
+
+    
     def __getitem__(self, index):
-        
         imagePath = self.listImagePaths[index]
+
+        # image path could be png instead of jpg because generative models only generate png
+        if self.first_file: 
+            self.replace_with_png = self.check_jpg_vs_png(imagePath)
+            self.first_file = False
+        if self.replace_with_png: 
+            imagePath = imagePath[:-4] + ".png"
         
         imageData = Image.open(imagePath).convert('RGB')
         imageLabel= torch.FloatTensor(self.listImageLabels[index])

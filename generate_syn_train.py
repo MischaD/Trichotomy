@@ -298,7 +298,7 @@ class ImageIterable:
                 # Save images
                 if self.outdir is not None:
                     for path, image, seed in zip(r.paths, r.images.permute(0, 2, 3, 1).cpu().numpy(), r.seeds):
-                        file_name = "".join(path.split(".")[:-1]) 
+                        file_name = ".".join(path.split(".")[:-1]) 
                         if self.add_seed_to_path: 
                             file_name += f"_seed_{seed}.png"
                         else: 
@@ -312,7 +312,7 @@ class ImageIterable:
             yield r
 
 
-def main(filelist, mode, outdir, model_weights, gmodel_weights, net, gnet, cond_mode, guidance, basedir):
+def main(filelist, mode, outdir, model_weights, gmodel_weights, net, gnet, cond_mode, guidance, basedir, pseudo_cond_feature_extractor):
     default_kwargs = {
         "EDM-2-AG":{
             "autoguidance":True,
@@ -398,8 +398,7 @@ def main(filelist, mode, outdir, model_weights, gmodel_weights, net, gnet, cond_
     print("Dataset kwargs:")
     pprint(ds_kwargs)
 
-
-    train_ds = LatentDataset(filelist_txt=filelist, load_to_memory=False, basedir=ds_kwargs["basedir"], cond_mode=ds_kwargs["cond_mode"])
+    train_ds = LatentDataset(filelist_txt=filelist, load_to_memory=False, basedir=ds_kwargs["basedir"], cond_mode=ds_kwargs["cond_mode"], pseudo_cond_feature_extractor=pseudo_cond_feature_extractor)
     print("="*80)
     net, gnet, encoder =  get_image_generation_model(**model_kwargs)
     print(f"Saving images to {outdir}")
@@ -431,6 +430,7 @@ if __name__ == "__main__":
     parser.add_argument("--net", type=str, required=True, help="Network configuration.")
     parser.add_argument("--gnet", type=str, required=True, help="Generative network configuration.")
     parser.add_argument("--cond_mode", type=str, required=True, help="Conditioning mode.")
+    parser.add_argument("--pseudo_cond_feature_extractor", help='Feature extractor for the pseudocon model. Precompute using beyondfid.', default="swav")
     parser.add_argument("--guidance", type=float, required=True, help="Guidance parameter.")
     parser.add_argument("--basedir", type=str, required=True, help="Base directory for Feature Dataset.")
     
@@ -440,5 +440,5 @@ if __name__ == "__main__":
         args.filelist, args.mode, args.outdir, 
         args.model_weights, args.gmodel_weights, 
         args.net, args.gnet, args.cond_mode, 
-        args.guidance, args.basedir
+        args.guidance, args.basedir, args.pseudo_cond_feature_extractor,
     )

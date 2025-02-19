@@ -34,6 +34,7 @@ SEED="42"
 SNAPSHOT="8Mi"
 CHECKPOINT="8Mi"
 STATUS="64Ki"
+PSEUDO_COND_FEATURE_EXTRACTOR="swav"
 
 
 #FILELIST="$BASE_DIR/datasets/eight_cxr8_train_debug.txt"; COND_MODE="cond"; OUTDIR="${OUTDIR_PREFIX}/cxr8_cond";;
@@ -76,10 +77,26 @@ echo "SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID"
 echo "FILELIST: $FILELIST"
 echo "COND_MODE: $COND_MODE"
 echo "OUTDIR: $OUTDIR"
+echo "N_GPUS: $N_GPUS"
+echo "PROGRAM: $PROGRAM"
+echo "PSEUDO_COND_FEATURE_EXTRACTOR: $PSEUDO_COND_FEATURE_EXTRACTOR"
+echo "DATA_BASE_DIR: $DATA_BASE_DIR"
+echo "PRETRAIN_PATH: $PRETRAIN_PATH"
+echo "PRESET: $PRESET"
+echo "BATCH_GPU: $BATCH_GPU"
+echo "ENCODER_NORM_MODE: $ENCODER_NORM_MODE"
+echo "LR: $LR"
+echo "DECAY: $DECAY"
+echo "FP16: $FP16"
+echo "SEED: $SEED"
+echo "SNAPSHOT: $SNAPSHOT"
+echo "CHECKPOINT: $CHECKPOINT"
+echo "STATUS: $STATUS"
 echo "==================================="
 
 # Execute the training script
 torchrun --standalone --nproc_per_node=${N_GPUS} $PROGRAM \
+    --pseudo_cond_feature_extractor $PSEUDO_COND_FEATURE_EXTRACTOR \
     --outdir $OUTDIR \
     --basedir $DATA_BASE_DIR \
     --filelist $FILELIST \
