@@ -113,7 +113,8 @@ class ImageIterableDSE:
                                 idx = clf_pred_scores.argmin()
                                 path_real = r.paths[idx]
                                 os.makedirs(os.path.dirname(image_pth), exist_ok=True)
-                                name, ending = tuple(path_real.split("."))
+
+                                name, ending = ".".join(path_real.split(".")[:-1]), path_real.split(".")[-1]
                                 image_pth = os.path.join(self.outdir, name + "_2nd." + ending)
                                 export_image(r.images[idx], image_pth)
 
@@ -221,7 +222,7 @@ def get_image_generation_model(path_net, path_gnet, model_weights, gmodel_weight
         
         encoder = data.get('encoder', None)
         encoder_mode = encoder.init_kwargs.encoder_norm_mode
-        encoder = dnnlib.util.construct_class_by_name(class_name='training.encoders.StabilityVAEEncoder', vae_name=encoder.init_kwargs.vae_name, encoder_norm_mode=encoder_mode)
+        encoder = dnnlib.util.construct_class_by_name(class_name='edm2.training.encoders.StabilityVAEEncoder', vae_name=encoder.init_kwargs.vae_name, encoder_norm_mode=encoder_mode)
         print(f"Encoder was initilized with {encoder._init_kwargs}")
 
     assert net is not None

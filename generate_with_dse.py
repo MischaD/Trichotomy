@@ -11,9 +11,8 @@ from pprint import pprint
 from src.utils import class_labels
 from src.dse import DiADMSampleEvaluator
 from src.diffusion.generation import get_image_generation_model, ImageIterableDSE
-
 from edm2.training.dataset import LatentDataset
-from edm2.generate_syn_train import edm_sampler
+from edm2.generate_images import edm_sampler
 
 
 def setup(rank, world_size, master_port):
@@ -21,14 +20,47 @@ def setup(rank, world_size, master_port):
     os.environ['MASTER_PORT'] = str(master_port) 
     torch.distributed.init_process_group("nccl", rank=rank, world_size=world_size)
 
+
 def cleanup():
     dist.destroy_process_group()
 
-def generate(rank, world_size, master_port, outdir, filelist, model_kwargs, n_per_index, ds_kwargs, sampler_kwargs):
+
+def check_for_already_generated(outdir, filelist, basedir):
+    """
+    For each line in filelist, checks if the image path exists within basedir.
+    If it does not exist, writes that line to a temporary file and returns the file's path.
+
+    Args:
+        outdir (str): Directory to check if it exists.
+        filelist (str): Path to the input file list.
+        basedir (str): Base directory where the image files should be located.
+
+    Returns:
+        str: Path to the temporary file containing non-existing image lines or None if all exist.
+    """
+    missing_imgs_idx = []
+    idx = 0
+    # Read filelist and check each image path
+    with open(filelist, "r") as fp:
+        for line in fp:
+            if line.strip():  # Ignore empty lines
+                parts = line.split()
+                image_path = os.path.join(outdir, parts[0])
+                if not os.path.exists(image_path):
+                    missing_imgs_idx.append(idx)
+                idx += 1
+
+    if len(missing_imgs_idx) != idx: 
+        print(f"Already found {idx - len(missing_imgs_idx)} images. Script will generate the remaining: {len(missing_imgs_idx)}")
+    return missing_imgs_idx 
+
+
+def generate(rank, world_size, master_port, outdir, filelist, model_kwargs, n_per_index, ds_kwargs, sampler_kwargs, clf_path, priv_path, missing_imgs_idx):
     setup(rank, world_size, master_port)
+
     train_ds = LatentDataset(filelist_txt=filelist, basedir=ds_kwargs["basedir"], cond_mode=ds_kwargs["cond_mode"], load_to_memory=False)
 
-    indices = torch.arange(len(train_ds))
+    indices = torch.tensor(missing_imgs_idx)
     indices = repeat(indices, "l -> b l", b=n_per_index)
     indices = indices.transpose(0, 1).flatten()
 
@@ -38,7 +70,7 @@ def generate(rank, world_size, master_port, outdir, filelist, model_kwargs, n_pe
 
     model_kwargs["device"] = device
     net, gnet, encoder = get_image_generation_model(**model_kwargs)
-    dse = DiADMSampleEvaluator(device)
+    dse = DiADMSampleEvaluator(device, clf_path=clf_path, priv_path=priv_path)
 
     # split_indices_per_gpu
     imgs_per_gpu = (len(train_ds) // world_size) * n_per_index
@@ -76,6 +108,7 @@ def parse_args():
     parser.add_argument("--n_per_index", type=int, default=4, help="Batch size and sampling factor.")
     parser.add_argument("--filelist", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt", help="Path to the filelist.")
     parser.add_argument("--target_dir", type=str, default="diadm_train_with_dse", help="Target directory for generated images.")
+    parser.add_argument("--basedir", type=str, help="Basedir of dataset")
     parser.add_argument("--mode", type=str, required=True, help="Mode for the model configuration.")
     parser.add_argument("--guidance", type=float, default=1.4, help="Guidance parameter.")
     parser.add_argument("--pseudo_cond_feature_extractor", help='Feature extractor for the pseudocon model. Precompute using beyondfid.', default="inception")
@@ -83,6 +116,8 @@ def parse_args():
     parser.add_argument("--gmodel_weights", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_uncond/training-state-0008388.pt", help="Path to guidance model weights.")
     parser.add_argument("--path_net", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_pseudocond/network-snapshot-0050331-0.100.pkl", help="Path to network snapshot.")
     parser.add_argument("--path_gnet", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/cxr8_diffusionmodels/baseline-runs/cxr8_uncond/network-snapshot-0008388-0.050.pkl", help="Path to guidance network snapshot.")
+    parser.add_argument("--clf_path", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/importantmodels/results_chexnet_real/saved_models_cxr8/m-05122024-131940.pth.tar", help="Path to classifier network.")
+    parser.add_argument("--priv_path", type=str, default="/vol/ideadata/ed52egek/pycharm/trichotomy/privacy/archive/Siamese_ResNet50_allcxr/Siamese_ResNet50_allcxr_checkpoint.pth", help="Path to classifier network.")
     parser.add_argument('--master_port', type=int, default=12344)
     return parser.parse_args()
 
@@ -93,7 +128,7 @@ if __name__ == "__main__":
 
     kwargs = {
         "DiADM": {
-            "autoguidance": True,
+            "autoguidance": False,# only works if second model is conditional
             "guidance": args.guidance,
             "model_kwargs": {
                 "model_weights": args.model_weights,
@@ -101,10 +136,11 @@ if __name__ == "__main__":
                 "path_net": args.path_net,
                 "path_gnet": args.path_gnet,
             },
+            "priv_path": args.priv_path,
+            "clf_path": args.clf_path,
             "ds_kwargs": {
                 "cond_mode": "pseudocond",
-                "basedir": "/vol/idea_ramses/ed52egek/data/trichotomy",
-                "basedir_images": "/vol/ideadata/ed52egek/data/chestxray14",
+                "basedir": args.basedir,
                 "pseudo_cond_feature_extractor": args.pseudo_cond_feature_extractor,
             }
         }
@@ -137,5 +173,9 @@ if __name__ == "__main__":
     #generate(outdir, args.filelist, net, gnet, encoder, args.n_per_index, ds_kwargs, sampler_kwargs)
     print(f"Saved images to {outdir}")
 
-    mp.spawn(generate, args=(world_size,  args.master_port, outdir, args.filelist, model_kwargs, args.n_per_index, ds_kwargs, sampler_kwargs), nprocs=world_size, join=True)
+
+    # check if we have already generated some images, if so generates a new .txt filelist 
+    missing_imgs_idx = check_for_already_generated(outdir=outdir, filelist=args.filelist, basedir=ds_kwargs["basedir"])
+
+    mp.spawn(generate, args=(world_size,  args.master_port, outdir, args.filelist, model_kwargs, args.n_per_index, ds_kwargs, sampler_kwargs,  kwargs[args.mode]["clf_path"], kwargs[args.mode]["priv_path"], missing_imgs_idx), nprocs=world_size, join=True)
 
