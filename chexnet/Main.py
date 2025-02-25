@@ -21,6 +21,7 @@ def main():
     train_parser.add_argument("--outfile", default="auroc_results.txt", required=True, help="Name of the test.txt file")
     train_parser.add_argument("--arch", default="DENSE-NET-121", choices=["DENSE-NET-121", "DENSE-NET-169", "DENSE-NET-201"], help="Model architecture")
     train_parser.add_argument("--pretrained", action="store_true", help="Use ImageNet pre-trained weights")
+    train_parser.add_argument("--use_cache", action="store_true", help="Store all train images in cache")
     train_parser.add_argument("--num_classes", type=int, default=8, help="Number of output classes")
     train_parser.add_argument("--batch_size", type=int, default=16, help="Batch size for training")
     train_parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
@@ -83,6 +84,7 @@ def runTrain(args):
         None,
         model_save_path,
         args.centercrop_only,
+        args.use_cache,
     )
 
     print("Training complete.")

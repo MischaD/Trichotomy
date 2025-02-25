@@ -73,9 +73,9 @@ def generate(rank, world_size, master_port, outdir, filelist, model_kwargs, n_pe
     dse = DiADMSampleEvaluator(device, clf_path=clf_path, priv_path=priv_path)
 
     # split_indices_per_gpu
-    imgs_per_gpu = (len(train_ds) // world_size) * n_per_index
+    imgs_per_gpu = (len(missing_imgs_idx) // world_size) * n_per_index
     indices_start = imgs_per_gpu * rank
-    indices_stop = imgs_per_gpu * (rank + 1) if rank != world_size -1 else len(train_ds) * n_per_index
+    indices_stop = imgs_per_gpu * (rank + 1) if rank != world_size -1 else len(missing_imgs_idx) * n_per_index
     indices_per_gpu = indices[indices_start:indices_stop]
 
     image_iter = ImageIterableDSE(train_ds=train_ds, 

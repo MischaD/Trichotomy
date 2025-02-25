@@ -43,61 +43,62 @@ from torch.utils.data import Dataset
 #        return len(self.cachedData)
 
 
-class DatasetGenerator (Dataset):
-    def __init__ (self, pathImageDirectory, pathDatasetFile, transform):
-    
+import os
+from torch.utils.data import Dataset
+from PIL import Image
+import torch
+
+class DatasetGenerator(Dataset):
+    def __init__(self, pathImageDirectory, pathDatasetFile, transform, use_cache=False):
         self.listImagePaths = []
         self.listImageLabels = []
         self.transform = transform
-    
-        fileDescriptor = open(pathDatasetFile, "r")
-        
-        line = True
-        self.first_file = True
+        self.use_cache = use_cache
+        self.image_cache = {}  # Cache to store loaded images
         self.replace_with_png = False
-        
-        while line:
-                
-            line = fileDescriptor.readline()
-            
-            if line:
-          
-                lineItems = line.split()
-                
-                imagePath = os.path.join(pathImageDirectory, lineItems[0])
-                imageLabel = lineItems[1:]
-                imageLabel = [int(i) for i in imageLabel]
-                
-                self.listImagePaths.append(imagePath)
-                self.listImageLabels.append(imageLabel)   
-            
-        fileDescriptor.close()
-    
-    def check_jpg_vs_png(self, image_path): 
-        if os.path.exists(image_path): 
-            return False
-        if os.path.exists(image_path[:-4] + ".png"): 
-            return True
-        raise FileNotFoundError(f"File not found (also not the png version:) {image_path}\n{image_path[:-4] + '.png'}")
 
-    
+        with open(pathDatasetFile, "r") as fileDescriptor:
+            for line in fileDescriptor:
+                if line.strip():
+                    lineItems = line.split()
+                    imagePath = os.path.join(pathImageDirectory, lineItems[0])
+                    imageLabel = list(map(int, lineItems[1:]))
+                    self.listImagePaths.append(imagePath)
+                    self.listImageLabels.append(imageLabel)
+
+    def check_jpg_vs_png(self, image_path):
+        if os.path.exists(image_path):
+            return False
+        if os.path.exists(image_path[:-4] + ".png"):
+            return True
+        raise FileNotFoundError(f"File not found (also not the PNG version): {image_path} or {image_path[:-4] + '.png'}")
+
+    def load_image(self, image_path):
+        if image_path not in self.image_cache:
+            img = Image.open(image_path).convert('RGB').resize((512, 512))
+            if self.use_cache == True: 
+                self.image_cache[image_path] = img
+            else: 
+                return img
+        return self.image_cache[image_path]
+
     def __getitem__(self, index):
         imagePath = self.listImagePaths[index]
 
-        # image path could be png instead of jpg because generative models only generate png
-        if self.first_file: 
+        # Check file extension replacement only once
+        if index == 0:
             self.replace_with_png = self.check_jpg_vs_png(imagePath)
-            self.first_file = False
-        if self.replace_with_png: 
+
+        if self.replace_with_png:
             imagePath = imagePath[:-4] + ".png"
-        
-        imageData = Image.open(imagePath).convert('RGB')
-        imageLabel= torch.FloatTensor(self.listImageLabels[index])
-        
-        if self.transform != None: imageData = self.transform(imageData)
-        
+
+        imageData = self.load_image(imagePath)
+        imageLabel = torch.FloatTensor(self.listImageLabels[index])
+
+        if self.transform:
+            imageData = self.transform(imageData)
+
         return imageData, imageLabel
-        
+
     def __len__(self):
         return len(self.listImagePaths)
-    

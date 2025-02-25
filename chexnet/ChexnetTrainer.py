@@ -45,7 +45,7 @@ class ChexnetTrainer ():
     #---- launchTimestamp - date/time, used to assign unique name for the checkpoint file
     #---- checkpoint - if not None loads the model and continues training
     
-    def train (pathDirData, pathDirTrainData, pathFileTrain, pathFileVal, nnArchitecture, nnIsTrained, nnClassCount, trBatchSize, trMaxEpoch, transResize, transCrop, launchTimestamp, checkpoint, model_save_path, centercrop_only):
+    def train (pathDirData, pathDirTrainData, pathFileTrain, pathFileVal, nnArchitecture, nnIsTrained, nnClassCount, trBatchSize, trMaxEpoch, transResize, transCrop, launchTimestamp, checkpoint, model_save_path, centercrop_only, use_cache):
 
         
         #-------------------- SETTINGS: NETWORK ARCHITECTURE
@@ -66,10 +66,10 @@ class ChexnetTrainer ():
         transformSequence=transforms.Compose(transformList)
 
         #-------------------- SETTINGS: DATASET BUILDERS
-        datasetTrain = DatasetGenerator(pathImageDirectory=pathDirTrainData, pathDatasetFile=pathFileTrain, transform=transformSequence)
+        datasetTrain = DatasetGenerator(pathImageDirectory=pathDirTrainData, pathDatasetFile=pathFileTrain, transform=transformSequence, use_cache=use_cache)
         datasetVal =   DatasetGenerator(pathImageDirectory=pathDirData, pathDatasetFile=pathFileVal, transform=transformSequence)
               
-        dataLoaderTrain = DataLoader(dataset=datasetTrain, batch_size=trBatchSize, shuffle=True,  num_workers=8, pin_memory=True)
+        dataLoaderTrain = DataLoader(dataset=datasetTrain, batch_size=trBatchSize, shuffle=True,  num_workers=16, pin_memory=True)
         dataLoaderVal = DataLoader(dataset=datasetVal, batch_size=trBatchSize, shuffle=False, num_workers=8, pin_memory=True)
         
         #-------------------- SETTINGS: OPTIMIZER & SCHEDULER
