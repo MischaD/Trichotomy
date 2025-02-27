@@ -8,7 +8,7 @@ EDM2
 
 ## 
 
-Step 1: Dataset preparation. Txt file in the following format
+Step 1: Dataset preparation. Txt file in the following format. This is the filelist you will be using for all scripts.
 
     images/00000006_000.png 1 0 0 0 0 0 0 0
 
@@ -16,34 +16,14 @@ Step 2: Compute Latents
 
     CUDA_VISIBLE_DEVICES=1 PYTHONPATH=/vol/ideadata/ed52egek/pycharm/trichotomy /vol/ideadata/ed52egek/conda/hugg/bin/python /vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_latents_img.py ./src/base_experiment.py latent_mimic --batch_size 16 --output_path /vol/ideadata/ed52egek/data/trichotomy/MIMIC --filelist /vol/ideadata/ed52egek/data/mimic/jpg/physionet.org/files/mimic-cxr-jpg/2.0.0/files/
 
-Step 3: Compute Latent Normalization factor for edm2
+Step 3: Compute Latent Normalization factor for edm2. Should be added to edm2/training/encoder.py:STATS.
 
+    python script/compute_latents_statistics.py --filelist path/to/filelist.csv --basedir /vol/ideadata/ed52egek/data/mimic/jpg/physionet.org/files/mimic-cxr-jpg/2.0.0/files/ --batch_size 32 --num_workers 4 --shuffle
 
 Step 4: Compute Features 
 
  export CUDA_VISIBLE_DEVICES=0; beyondfid /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8.csv "" "" --output_path /vol/idea_ramses/ed52egek/data/trichotomy/FEATURES --results_filename dummy.json --config-update=basedir=/vol/ideadata/ed52egek/data/chestxray14,feature_extractors.swav.batch_size=8 --feature_extractors swav  --master_port=12345
 
-
-# Reconstruction baseline: 
-
-## SDv2
- cd /vol/ideadata/ed52egek/pycharm/trichotomy; export PYTHONPATH=$PWD; conda activate edm2; export CUDA_VISIBLE_DEVICES=0; python /vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_reconstructs.py --basedir /vol/idea_ramses/ed52egek/data/trichotomy/ --batch_size 16 --output_path /vol/ideadata/ed52egek/data/reconstructed/chestxray14/ --filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt
-
-## Cosmos
-
-CUDA_VISIBLE_DEVICES=0 PYTHONPATH=/vol/ideadata/ed52egek/pycharm/trichotomy \
-/vol/ideadata/ed52egek/miniconda/envs/trichotomy/bin/python \
-/vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_latents_cosmos.py \
-./src/base_experiment.py \
-cosmos \
---batch_size 16 \
---basedir /vol/ideadata/ed52egek/data/chestxray14 \
---output_path /vol/ideadata/ed52egek/data/trichotomy/cosmos \
---filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8.csv
-
-#DATASETS["chexpert"]="/vol/ideadata/ed52egek/data/chexpert/chexpertchestxrays-u20210408"
-#DATASETS["mimic"]="/vol/ideadata/ed52egek/data/mimic/jpg/physionet.org/files/mimic-cxr-jpg/2.0.0/"
-#DATASETS["cxr8"]="/vol/ideadata/ed52egek/data/chestxray14"
 
 
 # Privacy Model: 
@@ -82,3 +62,45 @@ Change data_dir_train, train_file, outfile and save_path.
     --resize 256 \
     --crop 224 \
     --save_path ./saved_snth_models_diadm_dse
+
+
+# Diffusion Model 
+
+cond_mode determines the conditioning mode. For our results you will need one "uncond" run and one "pseudocond" run. 
+
+    python \
+        ./edm2/train_edm2.py \
+        --outdir debug-runs/00000-edm2-img512-custom \
+        --basedir /vol/idea_ramses/ed52egek/data/trichotomy \ # output of compute_latent_img 
+        --filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt \
+        --cond_mode pseudocond \
+        --preset edm2-img512-xs \
+        --batch-gpu 32 \
+        --encoder_norm_mode cxr8 \
+        --pseudo_cond_feature_extractor inception \
+        --fp16 True \
+        --seed 42 \
+        --status 2048 \
+        --snapshot 8Mi
+
+
+# Reconstruction baseline: 
+
+## SDv2
+ cd /vol/ideadata/ed52egek/pycharm/trichotomy; export PYTHONPATH=$PWD; conda activate edm2; export CUDA_VISIBLE_DEVICES=0; python /vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_reconstructs.py --basedir /vol/idea_ramses/ed52egek/data/trichotomy/ --batch_size 16 --output_path /vol/ideadata/ed52egek/data/reconstructed/chestxray14/ --filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8_train.txt
+
+## Cosmos
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=/vol/ideadata/ed52egek/pycharm/trichotomy \
+/vol/ideadata/ed52egek/miniconda/envs/trichotomy/bin/python \
+/vol/ideadata/ed52egek/pycharm/trichotomy/src/compute_latents_cosmos.py \
+./src/base_experiment.py \
+cosmos \
+--batch_size 16 \
+--basedir /vol/ideadata/ed52egek/data/chestxray14 \
+--output_path /vol/ideadata/ed52egek/data/trichotomy/cosmos \
+--filelist /vol/ideadata/ed52egek/pycharm/trichotomy/datasets/eight_cxr8.csv
+
+#DATASETS["chexpert"]="/vol/ideadata/ed52egek/data/chexpert/chexpertchestxrays-u20210408"
+#DATASETS["mimic"]="/vol/ideadata/ed52egek/data/mimic/jpg/physionet.org/files/mimic-cxr-jpg/2.0.0/"
+#DATASETS["cxr8"]="/vol/ideadata/ed52egek/data/chestxray14"
